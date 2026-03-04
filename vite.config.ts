@@ -4,6 +4,10 @@ import wasm from "vite-plugin-wasm";
 import topLevelAwait from "vite-plugin-top-level-await";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 
+// Cloudflare Pages defines CF_PAGES=1 automatically during builds.
+// GitHub Pages needs the /bitcoin-lottery base path.
+const base = process.env.CF_PAGES ? "/" : "/bitcoin-lottery";
+
 // https://vitejs.dev/config/
 export default defineConfig({
   build: {
@@ -21,5 +25,5 @@ export default defineConfig({
     nodePolyfills({ globals: { Buffer: true } }),
     react(),
   ],
-  base: "/bitcoin-lottery",
+  base,
 });
