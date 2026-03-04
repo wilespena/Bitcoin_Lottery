@@ -1,139 +1,289 @@
+/* ── Layout Root ─────────────────────────────── */
 #root {
-  max-width: 1280px;
+  max-width: 680px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 2rem 1.5rem 4rem;
   text-align: center;
-  min-width: 320px;
+  position: relative;
+  z-index: 1;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+/* ── Language Switcher ───────────────────────── */
+.lang-switcher {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-bottom: 2rem;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.lang-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+.lang-btn:hover,
+.lang-btn.active {
+  background: rgba(245, 159, 0, 0.12);
+  border-color: rgba(245, 159, 0, 0.4);
+  color: var(--gold-light);
 }
 
-.card {
-  padding: 2em;
+/* ── Target Badge ────────────────────────────── */
+.target-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(245, 159, 0, 0.07);
+  border: 1px solid rgba(245, 159, 0, 0.25);
+  border-radius: 14px;
+  padding: 12px 20px;
+  margin-bottom: 2.5rem;
+  flex-wrap: wrap;
+  row-gap: 4px;
 }
 
-.read-the-docs {
-  color: #888;
+.target-badge .reward {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--gold);
+  white-space: nowrap;
 }
 
-.roll-button {
-  background-color: #fab005;
-  font-size: 24px;
+.target-badge .address {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  letter-spacing: 0.03em;
+  word-break: break-all;
 }
 
-.roll-button:hover {
-  background-color: #fcc419;
+.target-badge .dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--border);
+  flex-shrink: 0;
 }
 
-/*Typewritter*/
+/* ── Typewriter Title ────────────────────────── */
+.typewriter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 2.5rem;
+}
 
 .typewriter h1 {
-  overflow: hidden; /* Ensures the content is not revealed until the animation */
-  border-right: 0.15em solid orange; /* The typwriter cursor */
-  white-space: nowrap; /* Keeps the content on a single line */
-  letter-spacing: 0.15em; /* Adjust as needed */
-  animation: typing 3.5s steps(40, end), blink-caret 0.75s step-end infinite;
+  overflow: hidden;
+  border-right: 0.12em solid var(--gold);
+  white-space: nowrap;
+  letter-spacing: 0.05em;
+  animation: typing 2.8s steps(30, end), blink-caret 0.75s step-end infinite;
+  background: linear-gradient(135deg, #fff 30%, var(--gold-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.typewriter img {
+  filter: drop-shadow(0 0 18px rgba(245, 159, 0, 0.55));
+  animation: bob 3s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes bob {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes typing {
+  from {
+    width: 0;
+  }
+
+  to {
+    width: 100%;
+  }
+}
+
+@keyframes blink-caret {
+
+  from,
+  to {
+    border-color: transparent;
+  }
+
+  50% {
+    border-color: var(--gold);
+  }
 }
 
 @media screen and (max-width: 500px) {
   .typewriter {
     flex-direction: column;
   }
+
   .typewriter img {
     order: -1;
   }
-  .typewriter h1 {
-    font-size: 24px;
-  }
 }
 
-/* The typing effect */
-@keyframes typing {
-  from {
-    width: 0;
-  }
-  to {
-    width: 100%;
-  }
+/* ── Main Glass Card ─────────────────────────── */
+.glass-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 2.5rem 2rem;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow:
+    0 0 0 1px rgba(245, 159, 0, 0.06) inset,
+    0 24px 48px rgba(0, 0, 0, 0.4);
+  margin-bottom: 1.5rem;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.2rem;
 }
 
-/* The typewriter cursor effect */
-@keyframes blink-caret {
-  from,
-  to {
-    border-color: transparent;
+/* ── Roll Button ─────────────────────────────── */
+.roll-button {
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+  color: #1a0a00;
+  font-size: 1.15rem;
+  font-weight: 700;
+  padding: 16px 48px;
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  box-shadow: 0 0 30px rgba(245, 159, 0, 0.35), 0 4px 16px rgba(0, 0, 0, 0.4);
+  animation: pulse-glow 2.4s ease-in-out infinite;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.roll-button:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 0 50px rgba(245, 159, 0, 0.55), 0 8px 24px rgba(0, 0, 0, 0.5);
+  animation: none;
+}
+
+.roll-button:active {
+  transform: scale(0.97);
+}
+
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 25px rgba(245, 159, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.4);
   }
+
   50% {
-    border-color: orange;
+    box-shadow: 0 0 50px rgba(245, 159, 0, 0.6), 0 4px 16px rgba(0, 0, 0, 0.4);
   }
 }
 
-/*Bitcoin Flying animation*/
-.flyingbitcoin {
-  width: 20px;
-  height: 20px;
-  position: absolute;
-  opacity: 50%;
-  top: 0;
-  animation: flying-bitcoin 2s linear 2s infinite;
-  opacity: 0;
+/* ── Result Box (terminal style) ─────────────── */
+.result-box {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(245, 159, 0, 0.18);
+  border-radius: 12px;
+  padding: 14px 18px;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: left;
+  line-height: 1.7;
+  word-break: break-all;
 }
 
-@keyframes flying-bitcoin {
-  0% {
-    transform: translateY(-100px);
+.result-box .label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--gold);
+  margin-bottom: 4px;
+  display: block;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+}
+
+.result-box .value {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+/* ── Attempt Counter ─────────────────────────── */
+.attempt-counter {
+  font-size: 12px;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.attempt-counter strong {
+  color: var(--gold-light);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Loading State ───────────────────────────── */
+.loading-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.loading-text {
+  font-size: 14px;
+  color: var(--text-muted);
+  letter-spacing: 0.08em;
+  animation: fade-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes fade-pulse {
+
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+
+  50% {
     opacity: 1;
   }
-  100% {
-    transform: translateY(100vh);
-    opacity: 0;
-  }
 }
-
-/* spining */
 
 .spinner {
-  width: 10em;
-  height: 10em;
-  border-top: 1em solid #fab005;
-  border-right: 1em solid transparent;
+  width: 56px;
+  height: 56px;
+  border: 3px solid rgba(245, 159, 0, 0.15);
+  border-top-color: var(--gold);
   border-radius: 50%;
-  margin: auto;
-  animation: spinner 0.6s linear infinite;
-}
-.head {
-  width: 1em;
-  height: 1em;
-  background-color: #fab005;
-  border-radius: 50%;
-  margin-left: 8.5em;
-  margin-top: 0.5em;
+  animation: spinner 0.7s linear infinite;
 }
 
 @keyframes spinner {
@@ -142,8 +292,73 @@
   }
 }
 
-.success-title {
-  padding: 4px;
-  background-color: #343a40;
-  color: #f08c00;
+/* ── Success State ───────────────────────────── */
+.success-banner {
+  background: linear-gradient(135deg, rgba(245, 159, 0, 0.15), rgba(230, 119, 0, 0.08));
+  border: 1px solid rgba(245, 159, 0, 0.4);
+  border-radius: 16px;
+  padding: 20px;
+  animation: pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  width: 100%;
+}
+
+.success-banner h2 {
+  font-size: 1.5rem;
+  color: var(--gold-light);
+  text-shadow: 0 0 20px rgba(255, 212, 59, 0.5);
+  letter-spacing: 0.05em;
+}
+
+@keyframes pop-in {
+  from {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ── Puzzle Info Footer ──────────────────────── */
+.puzzle-info {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.8;
+  padding: 0 0.5rem;
+}
+
+.puzzle-info strong {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.puzzle-info a {
+  color: var(--gold);
+  font-weight: 600;
+}
+
+/* ── Flying Bitcoin Background ───────────────── */
+.flyingbitcoin {
+  width: 18px;
+  height: 18px;
+  position: fixed;
+  top: -20px;
+  opacity: 0;
+  pointer-events: none;
+  filter: drop-shadow(0 0 6px rgba(245, 159, 0, 0.6));
+  animation: flying-bitcoin linear infinite;
+  z-index: 0;
+}
+
+@keyframes flying-bitcoin {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0.7;
+  }
+
+  100% {
+    transform: translateY(110vh) rotate(360deg);
+    opacity: 0;
+  }
 }

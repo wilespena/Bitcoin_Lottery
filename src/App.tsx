@@ -1,11 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import bitcoinLogo from "./assets/bitcoin.png";
 import { random32ByteRange, findPrivateKey, toWIF } from "./bitcoin";
 
 import englishContent from "./languages/english";
 import ptContent from "./languages/portuguese";
-
-let sideEffect = 0;
 
 enum LotteryState {
   Normal = "normal",
@@ -13,157 +11,175 @@ enum LotteryState {
   Success = "success",
 }
 
+const TARGET_ADDRESS = "1PWo3JeB9jrGwfHDNpdGK54CRas7fsVzXU";
+const REWARD = "7.1 BTC";
+
 function App() {
   const [state, setState] = useState(LotteryState.Normal);
-  const [content, setContentLanguage] = useState(englishContent);
-  const [text, setText] = useState(content["puzzle-state-initial"]);
+  const [lang, setLang] = useState<"en" | "pt">("en");
+  const content = lang === "pt" ? ptContent : englishContent;
+  const [resultMsg, setResultMsg] = useState<string | null>(null);
+  const [attempts, setAttempts] = useState(0);
+  const [foundKey, setFoundKey] = useState<{ hex: string; wif: string } | null>(null);
+
+  // Coin positions computed once on mount
+  const coinCount = window.innerWidth < 800 ? 5 : 12;
+  const coins = useRef(
+    Array.from({ length: coinCount }, (_, i) => ({
+      left: Math.round((i / coinCount) * 100) + Math.round(Math.random() * 7),
+      duration: 2 + Math.random() * 4,
+      delay: Math.random() * 5,
+      size: 14 + Math.round(Math.random() * 10),
+    }))
+  );
+
   useEffect(() => {
-    /**
-     * A stupid workaround that checks the url params to set the language used in the application.
-     */
     const queryParams = new URLSearchParams(window.location.search);
-    let lang = queryParams.get("lang");
-
-    if (!lang) {
+    const paramLang = queryParams.get("lang");
+    if (paramLang === "pt" || paramLang === "pt-br") {
+      setLang("pt");
+    } else if (paramLang === "en") {
+      setLang("en");
+    } else {
       const userLang = navigator.language || "en";
-      if (RegExp("^pt").test(userLang)) {
-        lang = "pt";
-      } else {
-        lang = "en";
-      }
+      setLang(/^pt/i.test(userLang) ? "pt" : "en");
     }
-
-    switch (lang) {
-      case "pt":
-      case "pt-br":
-        setContentLanguage(ptContent);
-        break;
-      default:
-        setContentLanguage(englishContent);
-        break;
-    }
-    setText(content["puzzle-state-initial"]);
-  }, [setContentLanguage, content, setText]);
+  }, []);
 
   const playLottery = async () => {
     const rangeStart = "400000000000000000";
     const rangeEnd = "7fffffffffffffffff";
     const start = random32ByteRange(rangeStart, rangeEnd);
-    const result = await findPrivateKey(
-      start,
-      "1PWo3JeB9jrGwfHDNpdGK54CRas7fsVzXU"
-    );
+    setAttempts((n) => n + 1);
 
-    if (result.success) {
-      /**
-       * In case the Private key is found
-       */
+    const result = await findPrivateKey(start, TARGET_ADDRESS);
+
+    if (result.success && result.privateKey) {
       setState(LotteryState.Success);
-      const wif =
-        result.privateKey &&
-        toWIF(result.privateKey.toString(16).padStart(64, "0"));
-      if (result.privateKey) {
-        setText(
-          content["puzzle-state-sucess-content"](
-            result.privateKey.toString(16),
-            wif || ""
-          )
-        );
-      }
+      const hex = result.privateKey.toString(16).padStart(64, "0");
+      const wif = toWIF(hex);
+      setFoundKey({ hex, wif });
+      setResultMsg(null);
     } else {
-      /**
-       * The key WAS NOT found
-       */
       setState(LotteryState.Normal);
-      setText(content["puzzle-state-not-found"](start));
+      setResultMsg(start);
     }
+  };
+
+  const handleRoll = () => {
+    setState(LotteryState.Loading);
+    setResultMsg(null);
+    setTimeout(() => {
+      playLottery();
+    }, 10);
   };
 
   return (
     <>
-      <div
-        style={{
-          display: "flex",
-          gap: "15px",
-          justifyContent: "center",
-          fontSize: "14px",
-        }}
-      >
-        <a href="?lang=en">Read in English</a>
-        <a href="?lang=pt">Ler em Portugues</a>
+      {/* ── Flying coins background ─────────── */}
+      {coins.current.map((coin, i) => (
+        <img
+          key={i}
+          src={bitcoinLogo}
+          className="flyingbitcoin"
+          style={{
+            left: `${coin.left}%`,
+            width: coin.size,
+            height: coin.size,
+            animationDuration: `${coin.duration}s`,
+            animationDelay: `${coin.delay}s`,
+          }}
+        />
+      ))}
+
+      {/* ── Language switcher ───────────────── */}
+      <div className="lang-switcher">
+        <button
+          className={`lang-btn${lang === "en" ? " active" : ""}`}
+          onClick={() => setLang("en")}
+        >
+          🇺🇸 EN
+        </button>
+        <button
+          className={`lang-btn${lang === "pt" ? " active" : ""}`}
+          onClick={() => setLang("pt")}
+        >
+          🇧🇷 PT
+        </button>
       </div>
-      <div
-        className="typewriter"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
+
+      {/* ── Title with typewriter ───────────── */}
+      <div className="typewriter">
         <h1>{content.title}</h1>
-        <img src={bitcoinLogo} width={100} />
+        <img src={bitcoinLogo} width={72} alt="Bitcoin" />
       </div>
-      <div className="card">
+
+      {/* ── Target address badge ────────────── */}
+      <div className="target-badge">
+        <span className="reward">₿ {REWARD}</span>
+        <span className="dot" />
+        <span className="address">{TARGET_ADDRESS}</span>
+      </div>
+
+      {/* ── Main card ──────────────────────── */}
+      <div className="glass-card">
+
         {state === LotteryState.Normal && (
-          <button
-            className="roll-button"
-            onClick={() => {
-              setState(LotteryState.Loading);
-              setTimeout(() => {
-                console.time("bitcoin");
-                playLottery();
-                console.timeEnd("bitcoin");
-                console.timeStamp("bitcoin");
-              }, 10);
-            }}
-          >
+          <button id="roll-btn" className="roll-button" onClick={handleRoll}>
             {content["roll-btn"]}
           </button>
         )}
 
         {state === LotteryState.Loading && (
-          <div className="spinner" style={{ fontSize: "5.8px" }}>
-            <div className="head"></div>
+          <div className="loading-wrap">
+            <div className="spinner" />
+            <span className="loading-text">
+              {lang === "pt" ? "Buscando chaves..." : "Searching keys..."}
+            </span>
           </div>
         )}
 
-        {state == LotteryState.Success && (
-          <div>
-            <h1 className="success-title">
-              {content["puzzle-state-success-title"]}
-            </h1>
+        {state === LotteryState.Success && foundKey && (
+          <div className="success-banner">
+            <h2>🎉 {content["puzzle-state-success-title"]}</h2>
+            <div className="result-box" style={{ marginTop: "1rem" }}>
+              <span className="label">Private Key (hex)</span>
+              <span className="value">{foundKey.hex}</span>
+            </div>
+            <div className="result-box" style={{ marginTop: "0.75rem" }}>
+              <span className="label">WIF</span>
+              <span className="value">{foundKey.wif}</span>
+            </div>
           </div>
         )}
 
-        <p>{text}</p>
+        {resultMsg !== null && state === LotteryState.Normal && (
+          <div className="result-box">
+            <span className="label">
+              {lang === "pt" ? "Última tentativa — chave inicial" : "Last attempt — start key"}
+            </span>
+            <span className="value">{resultMsg}</span>
+          </div>
+        )}
+
+        {attempts > 0 && state !== LotteryState.Success && (
+          <div className="attempt-counter">
+            <span>{lang === "pt" ? "Tentativas:" : "Attempts:"}</span>
+            <strong>{attempts.toLocaleString()}</strong>
+            <span>×</span>
+            <span>50,000 keys</span>
+            <span className="dot" style={{ width: 4, height: 4, borderRadius: "50%", background: "rgba(255,255,255,0.2)" }} />
+            <strong>{(attempts * 50000).toLocaleString()}</strong>
+            <span>{lang === "pt" ? "testadas" : "tested"}</span>
+          </div>
+        )}
       </div>
-      <p
-        className="read-the-docs"
-        dangerouslySetInnerHTML={{ __html: content["puzzle-info"] }}
-      ></p>
-      {
-        /*The following code are the little bitcoins dropping in the screen*/
-        [...new Array(window.innerWidth < 800 ? 4 : 10).keys()].map((i) => {
-          let x = Math.random() * window.innerWidth;
-          if (x < sideEffect + 50 && x > sideEffect - 50) {
-            x += 50;
-          }
 
-          sideEffect = x;
-          return (
-            <img
-              key={i}
-              src={bitcoinLogo}
-              className="flyingbitcoin"
-              style={{
-                left: x,
-                animationDuration: `${Math.ceil(Math.random() * 3)}s`,
-                animationDelay: `${Math.ceil(Math.random() * 3)}s`,
-              }}
-            />
-          );
-        })
-      }
+      {/* ── Info footer ───────────────────── */}
+      <p
+        className="puzzle-info"
+        dangerouslySetInnerHTML={{ __html: content["puzzle-info"] }}
+      />
     </>
   );
 }

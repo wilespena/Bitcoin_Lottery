@@ -8,5 +8,5 @@ export default {
   "puzzle-state-sucess-content": (keyHex: string, wif: string) =>
     `Voce encontrou a chave privada: ${keyHex}, aqui ta a WIF: ${wif}`,
   "puzzle-info":
-    'Isso é uma loteria para resolver o puzzle desse endereço: <strong>1PWo3JeB9jrGwfHDNpdGK54CRas7fsVzXU</strong><br></br> Nesse endereço tem 7.1 BTC, a cada tentativa voce testa 50 mil chaves. As possibilidades são de 36,893,488,147,419,103,231 chaves. <strong><br /> Leitura obrigatória: <a href="/bitcoin-lottery/education-pt.html"> Kangaroos! E o que fazer se eu achar?</a></strong>',
+    'Isso é uma loteria para resolver o puzzle desse endereço: <strong>1PWo3JeB9jrGwfHDNpdGK54CRas7fsVzXU</strong><br></br> Nesse endereço tem 7.1 BTC, a cada tentativa voce testa 50 mil chaves. As possibilidades são de 2.361 quintilhões de chaves. <strong><br /> Leitura obrigatória: <a href="/bitcoin-lottery/education-pt.html"> Kangaroos! E o que fazer se eu achar?</a></strong>',
 };
