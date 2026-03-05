@@ -52,9 +52,9 @@ export const random32ByteRange = (min: string, max: string) => {
   return result.toString(16);
 };
 
-export const findPrivateKey = async (start: string, goalAddress: string) => {
+export const findPrivateKey = async (start: string, goalAddress: string, batchSize = 50000) => {
   let privateKey = BigInt("0x" + start);
-  for (let i = 0; i < 50000; i++) {
+  for (let i = 0; i < batchSize; i++) {
     const resultAddres = generate_address_from_priv(privateKey.toString(16));
     if (resultAddres === goalAddress)
       return {

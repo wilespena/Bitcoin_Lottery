@@ -8,5 +8,5 @@ export default {
   "puzzle-state-sucess-content": (keyHex: string, wif: string) =>
     `Voce encontrou a chave privada: ${keyHex}, aqui ta a WIF: ${wif}`,
   "puzzle-info":
-    'Cada tentativa testa <strong>50.000 chaves</strong> aleatoriamente dentro do intervalo do puzzle selecionado. A dificuldade cresce com o número do puzzle — <strong>o #71 começa com ~2,3 quintilhões de chaves possíveis</strong> e chega a <strong>~18,4 quintilhões no #74</strong>. Pura sorte, mas alguém vai encontrar. <strong><br /><br /> Leitura obrigatória antes de resgatar: <a href="./education-pt.html"> Kangaroos! E o que fazer se eu achar?</a></strong>',
+    'Cada tentativa testa <strong>50.000 chaves</strong> aleatoriamente dentro do intervalo do puzzle selecionado. A dificuldade cresce com o número do puzzle — <strong>o #71 começa com ~2,3 quintilhões de chaves possíveis</strong> e chega a <strong>~18,4 quintilhões no #74</strong>. Pura sorte, mas alguém vai encontrar. <strong><br /><br /> Leitura obrigatória antes de resgatar: <a href="./education-pt.html">O que é o puzzle e cuidados antes de clamar →</a></strong>',
 };

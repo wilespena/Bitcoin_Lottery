@@ -372,17 +372,40 @@
     <h2>🔍 Como funciona esta loteria?</h2>
     <p>
       Este app roda <strong>100% no seu navegador</strong> — sem servidor, sem chamadas de API, sem nenhum dado
-      transmitido para fora.
-      Cada chave gerada fica no seu dispositivo.
+      transmitido para fora. Cada chave gerada fica no seu dispositivo.
     </p>
-    <p>
-      No <strong>modo normal</strong>, cada tentativa escolhe um ponto aleatório no intervalo do puzzle e testa as
-      próximas 50.000 chaves sequencialmente.
-      No <strong>modo infinito</strong>, cada lote de 1.000 chaves é gerado de forma completamente aleatória — pura
-      sorte, sem sequência.
-      De qualquer forma, encontrar a chave é estatisticamente improvável, mas matematicamente possível. Alguém vai
-      encontrar.
-    </p>
+    <p>Existem 3 modos de busca disponíveis:</p>
+
+    <div class="step">
+      <div class="step-num">🎲</div>
+      <div class="step-body">
+        <strong>Manual</strong><br>
+        A cada clique, um ponto de início é sorteado aleatoriamente dentro do intervalo do puzzle selecionado
+        e as próximas <strong>50.000 chaves privadas são testadas sequencialmente</strong>. Um roll por vez — você
+        controla o ritmo.
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">🎰</div>
+      <div class="step-body">
+        <strong>∞ Aleatório</strong><br>
+        Roda um loop interminável testando lotes de <strong>1.000 chaves completamente aleatórias</strong> por ciclo —
+        cada chave é gerada de forma independente via <code>window.crypto</code>. Sem sequência, pura sorte.
+        Roda até você clicar em Parar ou a chave ser encontrada.
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">🔁</div>
+      <div class="step-body">
+        <strong>∞ Sequencial</strong><br>
+        Roda um loop interminável onde cada lote sorteia um <strong>novo ponto de início aleatório</strong> e em seguida
+        testa <strong>N chaves sequencialmente</strong> a partir dali (padrão 50.000, totalmente customizável — mínimo
+        50k).
+        Combina a cobertura garantida da busca sequencial com a imprevisibilidade de um início aleatório.
+        Roda até você clicar em Parar ou a chave ser encontrada.
+      </div>
+    </div>
+
 
     <hr>
 

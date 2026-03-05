@@ -369,14 +369,36 @@
       This app runs <strong>100% in your browser</strong> — no server, no API calls, no data transmitted anywhere.
       Every key generated stays on your device.
     </p>
-    <p>
-      In <strong>normal mode</strong>, each roll picks a cryptographically random starting point within the selected
-      puzzle's range
-      and tests the next 50,000 private keys sequentially. In <strong>infinite mode</strong>, each batch of 1,000 keys
-      is generated
-      completely at random — pure luck, no sequence. Either way, finding the key is statistically improbable,
-      but mathematically possible. Someone will find it eventually.
-    </p>
+    <p>There are 3 search modes available:</p>
+
+    <div class="step">
+      <div class="step-num">🎲</div>
+      <div class="step-body">
+        <strong>Manual</strong><br>
+        Each click picks a cryptographically random starting point within the selected puzzle's range
+        and tests the next <strong>50,000 private keys sequentially</strong>. One roll at a time — you control the pace.
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">🎰</div>
+      <div class="step-body">
+        <strong>∞ Random</strong><br>
+        Runs an endless loop testing batches of <strong>1,000 completely random keys</strong> per cycle —
+        each key is independently generated via <code>window.crypto</code>. No sequence, pure luck.
+        Runs until you click Stop or the key is found.
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">🔁</div>
+      <div class="step-body">
+        <strong>∞ Sequential</strong><br>
+        Runs an endless loop where each batch picks a <strong>new random starting point</strong> and
+        then tests <strong>N keys sequentially</strong> from there (default 50,000, fully customizable — minimum 50k).
+        Combines the coverage guarantee of sequential search with the unpredictability of a random starting point.
+        Runs until you click Stop or the key is found.
+      </div>
+    </div>
+
 
     <hr>
 
