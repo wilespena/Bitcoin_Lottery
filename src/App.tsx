@@ -226,50 +226,52 @@ function App() {
         <img src={bitcoinLogo} width={72} alt="Bitcoin" />
       </div>
 
-      {/* ── Puzzle selector ─────────────────── */}
-      <div className="puzzle-selector-wrap">
-        <p className="puzzle-selector-label">
-          {lang === "pt" ? "Selecione o puzzle:" : "Select puzzle:"}
-        </p>
-        <div className="puzzle-selector">
-          {PUZZLES.map((puzzle) => (
-            <button
-              key={puzzle.number}
-              className={`puzzle-btn${selectedPuzzle.number === puzzle.number ? " active" : ""}${puzzle.solved ? " solved" : ""}`}
-              onClick={() => handleSelectPuzzle(puzzle)}
-              title={puzzle.address}
-            >
-              <span className="puzzle-btn-number">#{puzzle.number}</span>
-              <span className="puzzle-btn-reward">
-                {puzzle.solved
-                  ? (lang === "pt" ? "Resolvido" : "Solved")
-                  : puzzle.reward}
-              </span>
-            </button>
-          ))}
-        </div>
+      {/* ── Puzzle selector (hidden on success to preserve result) ── */}
+      {state !== LotteryState.Success && (
+        <div className="puzzle-selector-wrap">
+          <p className="puzzle-selector-label">
+            {lang === "pt" ? "Selecione o puzzle:" : "Select puzzle:"}
+          </p>
+          <div className="puzzle-selector">
+            {PUZZLES.map((puzzle) => (
+              <button
+                key={puzzle.number}
+                className={`puzzle-btn${selectedPuzzle.number === puzzle.number ? " active" : ""}${puzzle.solved ? " solved" : ""}`}
+                onClick={() => handleSelectPuzzle(puzzle)}
+                title={puzzle.address}
+              >
+                <span className="puzzle-btn-number">#{puzzle.number}</span>
+                <span className="puzzle-btn-reward">
+                  {puzzle.solved
+                    ? (lang === "pt" ? "Resolvido" : "Solved")
+                    : puzzle.reward}
+                </span>
+              </button>
+            ))}
+          </div>
 
-        {/* Selected puzzle info */}
-        <div className="target-badge">
-          <div className="target-badge-main">
-            <span className="reward">
-              {selectedPuzzle.solved
-                ? "🧪 " + (lang === "pt" ? "Modo Teste" : "Test Mode")
-                : `₿ ${selectedPuzzle.reward}`}
-            </span>
-            <span className="dot" />
-            <span className="address">{selectedPuzzle.address}</span>
-          </div>
-          <div className="target-badge-range">
-            <span className="range-label">
-              {lang === "pt" ? "intervalo:" : "range:"}
-            </span>
-            <span className="range-value">
-              {selectedPuzzle.rangeStart} → {selectedPuzzle.rangeEnd}
-            </span>
+          {/* Selected puzzle info */}
+          <div className="target-badge">
+            <div className="target-badge-main">
+              <span className="reward">
+                {selectedPuzzle.solved
+                  ? "🧪 " + (lang === "pt" ? "Modo Teste" : "Test Mode")
+                  : `₿ ${selectedPuzzle.reward}`}
+              </span>
+              <span className="dot" />
+              <span className="address">{selectedPuzzle.address}</span>
+            </div>
+            <div className="target-badge-range">
+              <span className="range-label">
+                {lang === "pt" ? "intervalo:" : "range:"}
+              </span>
+              <span className="range-value">
+                {selectedPuzzle.rangeStart} → {selectedPuzzle.rangeEnd}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* ── Main card ──────────────────────── */}
       <div className="glass-card">

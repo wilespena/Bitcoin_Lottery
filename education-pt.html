@@ -1,129 +1,375 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="favico.ico" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Bitcoin Web Lottery - Aprenda sobre os desafios!</title>
+  <title>Bitcoin Lottery — O que fazer se encontrar a chave?</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
     :root {
-      font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-      line-height: 1.5;
-      font-weight: 400;
-      color-scheme: light dark;
-      color: rgba(255, 255, 255, 0.87);
-      background-color: #242424;
+      --gold: #f59f00;
+      --gold-light: #fcc419;
+      --bg: #0f0e0a;
+      --surface: rgba(255, 255, 255, 0.04);
+      --border: rgba(255, 255, 255, 0.08);
+      --text: rgba(255, 255, 255, 0.87);
+      --muted: rgba(255, 255, 255, 0.45);
+      --mono: 'JetBrains Mono', monospace;
+      --red: #f87171;
+      --green: #86efac;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
 
     body {
-      margin: 0;
-      padding: 2rem;
-      min-width: 320px;
+      font-family: 'Inter', system-ui, sans-serif;
+      background-color: var(--bg);
+      background-image: radial-gradient(ellipse at 50% 0%, rgba(245, 159, 0, 0.06) 0%, transparent 70%);
+      color: var(--text);
+      line-height: 1.7;
+      padding: 2.5rem 1.5rem 5rem;
+      min-height: 100vh;
     }
 
-    a {
-      color: #646cff;
-      text-decoration: inherit;
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
     }
 
-    a:hover {
-      color: #535bf2;
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--gold);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 2.5rem;
+      opacity: 0.8;
+      transition: opacity 0.2s;
     }
 
-    h1,
+    .back-link:hover {
+      opacity: 1;
+    }
+
+    h1 {
+      font-size: clamp(1.6rem, 4vw, 2.2rem);
+      font-weight: 700;
+      color: var(--gold-light);
+      margin-bottom: 0.5rem;
+      line-height: 1.2;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 1rem;
+      margin-bottom: 2.5rem;
+    }
+
     h2 {
-      line-height: 1.1;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--gold);
+      margin: 2rem 0 0.75rem;
     }
 
     p {
-      font-size: 18px;
+      margin-bottom: 1rem;
+      color: var(--text);
+      font-size: 1rem;
     }
 
-    @media (prefers-color-scheme: light) {
-      :root {
-        color: #213547;
-        background-color: #ffffff;
-      }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+    }
 
-      a:hover {
-        color: #747bff;
-      }
+    .card.danger {
+      border-color: rgba(248, 113, 113, 0.35);
+      background: rgba(248, 113, 113, 0.06);
+    }
+
+    .card.success {
+      border-color: rgba(134, 239, 172, 0.35);
+      background: rgba(134, 239, 172, 0.06);
+    }
+
+    .card.gold {
+      border-color: rgba(245, 159, 0, 0.4);
+      background: rgba(245, 159, 0, 0.06);
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 3px 10px;
+      border-radius: 999px;
+      margin-bottom: 0.75rem;
+    }
+
+    .badge.red {
+      background: rgba(248, 113, 113, 0.15);
+      color: var(--red);
+      border: 1px solid rgba(248, 113, 113, 0.3);
+    }
+
+    .badge.green {
+      background: rgba(134, 239, 172, 0.15);
+      color: var(--green);
+      border: 1px solid rgba(134, 239, 172, 0.3);
+    }
+
+    .badge.gold {
+      background: rgba(245, 159, 0, 0.15);
+      color: var(--gold-light);
+      border: 1px solid rgba(245, 159, 0, 0.3);
+    }
+
+    .step {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 1.25rem;
+      align-items: flex-start;
+    }
+
+    .step-num {
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(245, 159, 0, 0.15);
+      border: 1px solid rgba(245, 159, 0, 0.4);
+      color: var(--gold);
+      font-weight: 700;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .step-body {
+      flex: 1;
+      padding-top: 4px;
+    }
+
+    code {
+      font-family: var(--mono);
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      padding: 2px 7px;
+      font-size: 0.88em;
+      color: var(--gold-light);
+      word-break: break-all;
+    }
+
+    .address-box {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: var(--gold-light);
+      word-break: break-all;
+      margin-top: 0.5rem;
+    }
+
+    a {
+      color: var(--gold);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    a:hover {
+      color: var(--gold-light);
+      text-decoration: underline;
+    }
+
+    strong {
+      color: var(--gold-light);
+    }
+
+    hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 2.5rem 0;
+    }
+
+    .footer {
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--muted);
+      text-align: center;
     }
   </style>
 </head>
 
 <body>
-  <div id="root" style="text-align: start; min-width: 320px; max-width: 800px">
-    <h1 id="what-to-do-if-i-found-the-private-key">
-      O que fazer se eu achar a chave privada?
-    </h1>
+  <div class="container">
+    <a class="back-link" href="./">← Voltar para a Loteria Bitcoin</a>
+
+    <h1>🏆 Você encontrou a chave — e agora?</h1>
+    <p class="subtitle">Leia com atenção antes de fazer qualquer coisa. Um movimento errado pode custar tudo.</p>
+
+    <!-- AVISO PRINCIPAL -->
+    <div class="card danger">
+      <span class="badge red">⚠️ Atenção</span>
+      <h2 style="margin-top:0">Resgatar NÃO é tão simples quanto enviar uma transação</h2>
+      <p>
+        No momento em que você transmite uma transação a partir do endereço do puzzle, você expõe a <strong>chave
+          pública</strong>
+        para toda a rede. Bots automatizados monitoram a mempool 24 horas por dia, 7 dias por semana, esperando
+        exatamente por isso.
+        Eles podem enviar uma transação concorrente com taxas mais altas, roubando seus Bitcoin antes que sua transação
+        confirme.
+      </p>
+      <p>
+        <strong>Desativar RBF (Replace-By-Fee) NÃO te protege.</strong>
+        Os bots ainda podem usar outras estratégias de aumento de taxa. A exposição da chave pública é a vulnerabilidade
+        real.
+      </p>
+    </div>
+
+    <!-- KANGAROO -->
+    <h2>🦘 Por que a chave pública é um problema?</h2>
     <p>
-      Se voce achou a chava privada, parabens! To muito feliz que esse
-      estupido programa que eu fiz mudou a vida de alguem!<br /><br />Mas
-      recuperar esses Bitcoins do puzzle <strong>NÃO É</strong> tão simples
-      assim.
+      Os endereços dos puzzles Bitcoin foram gerados a partir de intervalos de chave privada conhecidos. Pesquisadores e
+      bots
+      já computaram as <strong>chaves públicas</strong> de muitos desses endereços usando algoritmos como o
+      <a href="https://github.com/demining/Kangaroo-by-JeanLucPons" target="_blank" rel="noreferrer">Canguru de
+        Pollard</a>.
+      Assim que sua transação entra na mempool, eles conhecem a chave pública e podem criar uma transação conflitante
+      mais rápido que a sua confirma.
     </p>
-    <p>Por que?</p>
+
+    <hr>
+
+    <!-- MÉTODO SEGURO MARA -->
+    <div class="card success">
+      <span class="badge green">✅ Método Recomendado</span>
+      <h2 style="margin-top:0">Saque seguro via MARA Slipstream</h2>
+      <p>
+        O <a href="https://slipstream.mara.com/" target="_blank" rel="noreferrer">MARA Slipstream</a> é um serviço
+        privado de envio de transações
+        da Marathon Digital Holdings, uma das maiores mineradoras de Bitcoin do mundo.
+        Ao submeter sua transação pelo Slipstream, ela <strong>jamais é transmitida para a mempool pública</strong>.
+        A MARA minera o bloco contendo sua transação de forma silenciosa — sua chave pública só é revelada <em>após</em>
+        o bloco ser confirmado.
+        Nesse ponto, é tarde demais para qualquer bot agir.
+      </p>
+    </div>
+
+    <h2>📋 Passo a passo: como resgatar com segurança</h2>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <strong>NÃO transmita nada ainda.</strong><br>
+        Feche qualquer carteira que possa transmitir automaticamente. Não importe a chave privada em uma carteira padrão
+        conectada à internet.
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <strong>Construa sua transação offline.</strong><br>
+        Use um computador sem conexão à internet ou uma ferramenta de assinatura offline para criar e assinar uma
+        transação
+        enviando os BTC para um novo endereço de carteira que você controla. Não conecte à internet durante esta etapa.
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <strong>Envie SOMENTE para o MARA Slipstream.</strong><br>
+        Copie sua transação hex assinada e acesse
+        <a href="https://slipstream.mara.com/" target="_blank" rel="noreferrer">slipstream.mara.com</a>.
+        Envie a transação lá. Ela será adicionada de forma privada ao próximo bloco da MARA, sem passar pela mempool
+        pública.
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <strong>Aguarde a confirmação.</strong><br>
+        Quando a MARA minerar um bloco contendo sua transação, ela aparecerá na blockchain confirmada.
+        Só nesse momento sua chave pública é revelada — mas a transação já é final e imutável.
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <strong>Mova seus fundos novamente.</strong><br>
+        Após a primeira confirmação, envie os BTC do novo endereço para sua carteira fria definitiva.
+        A partir daqui, transações normais são seguras.
+      </div>
+    </div>
+
+    <div class="card gold">
+      <span class="badge gold">💡 Dica</span>
+      <p style="margin:0">
+        O MARA Slipstream é gratuito. Basta definir uma taxa competitiva para que a MARA tenha incentivo de incluir sua
+        transação.
+        Verifique as taxas atuais em
+        <a href="https://mempool.space" target="_blank" rel="noreferrer">mempool.space</a> antes de construir sua
+        transação.
+      </p>
+    </div>
+
+    <hr>
+
+    <!-- COMO FUNCIONA -->
+    <h2>🔍 Como funciona esta loteria?</h2>
     <p>
-      Por causa dos <strong>KANGAROOS</strong>! Sim! Isso aqui
-      <strong>NÃO É</strong> uma brincadeira!
+      Este app roda <strong>100% no seu navegador</strong> — sem servidor, sem chamadas de API, sem nenhum dado
+      transmitido para fora.
+      Cada chave gerada fica no seu dispositivo.
     </p>
     <p>
-      Se voce ler sobre os 160 puzzles, voce vai perceber que alguns puzzles
-      ja foram resolvido, puzzles mais difíceis do que o puzzle 66,
+      No <strong>modo normal</strong>, cada tentativa escolhe um ponto aleatório no intervalo do puzzle e testa as
+      próximas 50.000 chaves sequencialmente.
+      No <strong>modo infinito</strong>, cada lote de 1.000 chaves é gerado de forma completamente aleatória — pura
+      sorte, sem sequência.
+      De qualquer forma, encontrar a chave é estatisticamente improvável, mas matematicamente possível. Alguém vai
+      encontrar.
     </p>
-    <p>
-      É por que eles usaram um algoritmo diferente para essa questao, o
-      Pollard Kanagaroo, por que a chave publica desses enderecos foram
-      expostas e eles sabiam o range da chave privada.
-    </p>
-    <h2 id="what-to-do">O que eu faco então?</h2>
-    <p>
-      Se voce fazer uma transação, voce vai expor a chave publica, entao um
-      monte de BOTS ouvindo a mempool vao tentar correr e mudar sua transação.
-    </p>
-    <p>
-      <strong>NÃO ADIANTE SE VOCE DESABILITAR O RBF(Replace by Fee), eles ainda
-        conseguem roubar seus Bitcoins do puzzle.</strong>
-    </p>
-    <h2 id="the-harder-choice">A escolha dificil</h2>
-    <p>
-      Não existe a escolha sem rico aqui - A escolha com menos riscos é
-      minerar seu proprio bloco e a adicionar a transação na blockchain. O
-      risco é se houver um Fork na Blockchian que acontece 2 vezes no mes.
-    </p>
-    <p>
-      Para mais informarções, leia esse artigo no Github:
-      <a href="https://github.com/demining/Kangaroo-by-JeanLucPons">Pollard’s kangaroo for SECP256k1 (Ingles)</a>
-    </p>
-    <p>
-      <strong>Obrigado e que Deus te abençõe! Eu espero que voce aprendeu algo novo
-        aqui!</strong>
-      Use essa pagina, não para desperdicar tempo, mas para melhorar seu
-      conhecimento!
-    </p>
-    <p>Se quiser me fazer uma doação, eu aceito com Amor s2!</p>
-    <p>1LovegWGQC3hiUE2mTiWuAUfY3St9BNs9B</p>
-    <p>
-      Eu fiz esse programa com TypeScript usando React com Vite. Usa
-      bitcoinjs-lib e tiny-secp256k1 para gerar endereços P2PKH pela hex
-      da chave privada — 100% no navegador, sem servidor envolvido.
-    </p>
-    <p>
-      E muito obrigado o rapaz que vem crackendo keys e trazendo informações
-      para a comunidade brasileira a respeiro disso! (Eu vou mencionar ele
-      aqui se ele permitir)
-    </p>
-    <p>
-      <strong>
-        Esse site não faz requisições para sites externos! Não confie,
-        verifique!
-      </strong>
-    </p>
-    <p>
-      Se alguem achar a chave, eu não vou nem saber. Então tome muito cuidado!
-    </p>
+
+    <hr>
+
+    <!-- DOAÇÃO -->
+    <div class="card gold">
+      <span class="badge gold">❤️ Apoie este projeto</span>
+      <h2 style="margin-top:0">Gostou da ferramenta? Manda um cafézinho!</h2>
+      <p>
+        Este projeto é open-source e gratuito. Se achou útil — ou especialmente se ganhar —
+        qualquer contribuição é muito bem-vinda e apreciada.
+      </p>
+      <div class="address-box">bc1qlzydlvx8s2d2lgumzfxzwnah2paqszm3plrq40</div>
+    </div>
+
+    <div class="footer">
+      Bitcoin Lottery · Open-source · 100% no navegador · Sem servidores · Sem rastreamento
+    </div>
   </div>
 </body>
 

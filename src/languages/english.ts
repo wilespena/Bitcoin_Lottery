@@ -8,5 +8,5 @@ export default {
   "puzzle-state-sucess-content": (keyHex: string, wif: string) =>
     `You found the key ${keyHex}, this is the WIF: ${wif}`,
   "puzzle-info":
-    'This is a lottery to solve a puzzle of this address: <strong>1PWo3JeB9jrGwfHDNpdGK54CRas7fsVzXU</strong><br></br> It contains 7.1 BTC, each time you roll you try 50K keys, the possibilities is 2.361 quintillion keys. <strong><br /> MUST READ: <a href="./education.html"> Kangaroos and What to do If I found it?</a></strong>',
+    'Each roll tests <strong>50,000 keys</strong> randomly within the selected puzzle\'s range. The difficulty scales with the puzzle number — <strong>#71 starts at ~2.3 quintillion possible keys</strong> and goes up to <strong>~18.4 quintillion on #74</strong>. Pure luck, but someone has to find it. <strong><br /><br /> MUST READ before claiming: <a href="./education.html"> Kangaroos and What to do If I found it?</a></strong>',
 };
