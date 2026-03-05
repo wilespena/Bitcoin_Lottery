@@ -69,10 +69,14 @@ function App() {
   const [resultMsg, setResultMsg] = useState<string | null>(null);
   const [attempts, setAttempts] = useState(0);
   const [keysChecked, setKeysChecked] = useState(0);
+  const [keysPerSec, setKeysPerSec] = useState(0);
   const [foundKey, setFoundKey] = useState<{ hex: string; wif: string } | null>(null);
 
   // Ref to control stopping the infinite loop from outside
   const stopRef = useRef(false);
+  // Timestamp when infinite loop started (for k/s calculation)
+  const startTimeRef = useRef<number>(0);
+  const keysCheckedRef = useRef<number>(0);
 
   // Coin positions computed once on mount
   const coinCount = window.innerWidth < 800 ? 5 : 12;
@@ -151,8 +155,15 @@ function App() {
       1000
     );
 
+    keysCheckedRef.current += 1000;
     setAttempts((n) => n + 1);
-    setKeysChecked((n) => n + 1000);
+    setKeysChecked(keysCheckedRef.current);
+
+    // Compute keys/sec from elapsed time
+    const elapsed = (Date.now() - startTimeRef.current) / 1000;
+    if (elapsed > 0) {
+      setKeysPerSec(Math.round(keysCheckedRef.current / elapsed));
+    }
 
     if (result.success && result.privateKey) {
       handleSuccess(result.privateKey);
@@ -166,10 +177,13 @@ function App() {
   const handleRoll = () => {
     if (infiniteMode) {
       stopRef.current = false;
+      startTimeRef.current = Date.now();
+      keysCheckedRef.current = 0;
       setState(LotteryState.Running);
       setResultMsg(null);
       setAttempts(0);
       setKeysChecked(0);
+      setKeysPerSec(0);
       setTimeout(runInfiniteLoop, 10);
     } else {
       setState(LotteryState.Loading);
@@ -379,9 +393,13 @@ function App() {
         {/* Attempt / keys counter */}
         {(attempts > 0) && state !== LotteryState.Success && (
           <div className="attempt-counter">
-            <span>{lang === "pt" ? "Lotes:" : "Batches:"}</span>
-            <strong>{attempts.toLocaleString()}</strong>
-            <span className="counter-dot" />
+            {state === LotteryState.Running && keysPerSec > 0 ? (
+              <>
+                <span>{lang === "pt" ? "Velocidade:" : "Speed:"}</span>
+                <strong>{keysPerSec.toLocaleString()} keys/s</strong>
+                <span className="counter-dot" />
+              </>
+            ) : null}
             <span>{lang === "pt" ? "Chaves testadas:" : "Keys tested:"}</span>
             <strong>{keysChecked.toLocaleString()}</strong>
           </div>
