@@ -38,17 +38,99 @@
   color: var(--gold-light);
 }
 
+/* ── Puzzle Selector ─────────────────────────── */
+.puzzle-selector-wrap {
+  margin-bottom: 2rem;
+}
+
+.puzzle-selector-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin: 0 0 10px;
+  font-weight: 600;
+}
+
+.puzzle-selector {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.puzzle-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 10px 16px;
+  min-width: 78px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--text-muted);
+}
+
+.puzzle-btn:hover {
+  background: rgba(245, 159, 0, 0.1);
+  border-color: rgba(245, 159, 0, 0.35);
+  color: var(--gold-light);
+  transform: translateY(-2px);
+}
+
+.puzzle-btn.active {
+  background: rgba(245, 159, 0, 0.14);
+  border-color: rgba(245, 159, 0, 0.55);
+  color: var(--gold-light);
+  box-shadow: 0 0 14px rgba(245, 159, 0, 0.2);
+}
+
+.puzzle-btn.solved {
+  opacity: 0.6;
+  border-style: dashed;
+}
+
+.puzzle-btn.solved.active {
+  border-color: rgba(100, 200, 100, 0.5);
+  background: rgba(100, 200, 100, 0.08);
+  color: #86efac;
+  box-shadow: 0 0 14px rgba(100, 200, 100, 0.15);
+  opacity: 1;
+}
+
+.puzzle-btn-number {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.puzzle-btn-reward {
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
 /* ── Target Badge ────────────────────────────── */
 .target-badge {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
+  gap: 6px;
   background: rgba(245, 159, 0, 0.07);
   border: 1px solid rgba(245, 159, 0, 0.25);
   border-radius: 14px;
   padding: 12px 20px;
-  margin-bottom: 2.5rem;
+}
+
+.target-badge-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   flex-wrap: wrap;
   row-gap: 4px;
 }
@@ -74,6 +156,34 @@
   border-radius: 50%;
   background: var(--border);
   flex-shrink: 0;
+}
+
+.target-badge-range {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-top: 1px solid rgba(245, 159, 0, 0.12);
+  padding-top: 6px;
+  width: 100%;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.range-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.range-value {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  word-break: break-all;
+  text-align: center;
 }
 
 /* ── Typewriter Title ────────────────────────── */
@@ -361,4 +471,77 @@
     transform: translateY(110vh) rotate(360deg);
     opacity: 0;
   }
+}
+
+/* ── Not Found State ─────────────────────────── */
+.not-found-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  animation: pop-in 0.3s ease;
+}
+
+.not-found-badge {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 14px 18px;
+  text-align: left;
+  width: 100%;
+}
+
+.not-found-icon {
+  font-size: 1.6rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.not-found-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0 0 4px;
+}
+
+.not-found-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ── Success Header & Warning ────────────────── */
+.success-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 0.25rem;
+}
+
+.success-icon {
+  font-size: 2rem;
+}
+
+.success-warning {
+  margin-top: 1rem;
+  background: rgba(255, 170, 0, 0.08);
+  border: 1px solid rgba(255, 170, 0, 0.25);
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 13px;
+  color: rgba(255, 200, 100, 0.9);
+  line-height: 1.6;
+  text-align: left;
+}
+
+.success-warning a {
+  color: var(--gold-light);
+  font-weight: 600;
+  margin-left: 4px;
 }
