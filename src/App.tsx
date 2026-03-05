@@ -1,6 +1,6 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import bitcoinLogo from "./assets/bitcoin.png";
-import { random32ByteRange, findPrivateKey, toWIF } from "./bitcoin";
+import { random32ByteRange, findPrivateKey, findOneRandomBatch, toWIF } from "./bitcoin";
 
 import englishContent from "./languages/english";
 import ptContent from "./languages/portuguese";
@@ -8,6 +8,7 @@ import ptContent from "./languages/portuguese";
 enum LotteryState {
   Normal = "normal",
   Loading = "loading",
+  Running = "running",   // infinite mode active
   Success = "success",
 }
 
@@ -63,10 +64,15 @@ function App() {
   const [state, setState] = useState(LotteryState.Normal);
   const [lang, setLang] = useState<"en" | "pt">("en");
   const content = lang === "pt" ? ptContent : englishContent;
-  const [selectedPuzzle, setSelectedPuzzle] = useState<Puzzle>(PUZZLES[1]); // #71 default
+  const [selectedPuzzle, setSelectedPuzzle] = useState<Puzzle>(PUZZLES[1]);
+  const [infiniteMode, setInfiniteMode] = useState(false);
   const [resultMsg, setResultMsg] = useState<string | null>(null);
   const [attempts, setAttempts] = useState(0);
+  const [keysChecked, setKeysChecked] = useState(0);
   const [foundKey, setFoundKey] = useState<{ hex: string; wif: string } | null>(null);
+
+  // Ref to control stopping the infinite loop from outside
+  const stopRef = useRef(false);
 
   // Coin positions computed once on mount
   const coinCount = window.innerWidth < 800 ? 5 : 12;
@@ -92,40 +98,93 @@ function App() {
     }
   }, []);
 
-  // Reset state when puzzle changes
-  const handleSelectPuzzle = (puzzle: Puzzle) => {
-    setSelectedPuzzle(puzzle);
+  const resetState = () => {
     setState(LotteryState.Normal);
     setResultMsg(null);
     setAttempts(0);
+    setKeysChecked(0);
     setFoundKey(null);
   };
 
-  const playLottery = async () => {
+  const handleSelectPuzzle = (puzzle: Puzzle) => {
+    stopRef.current = true; // stop any running infinite loop
+    setSelectedPuzzle(puzzle);
+    resetState();
+  };
+
+  const handleSuccess = (privateKey: bigint) => {
+    setState(LotteryState.Success);
+    stopRef.current = true;
+    const hex = privateKey.toString(16).padStart(64, "0");
+    const wif = toWIF(hex);
+    setFoundKey({ hex, wif });
+    setResultMsg(null);
+  };
+
+  // ── Normal mode: random start + 50k sequential ────────────────
+  const playNormal = async () => {
     const start = random32ByteRange(selectedPuzzle.rangeStart, selectedPuzzle.rangeEnd);
     setAttempts((n) => n + 1);
+    setKeysChecked((n) => n + 50000);
 
     const result = await findPrivateKey(start, selectedPuzzle.address);
 
     if (result.success && result.privateKey) {
-      setState(LotteryState.Success);
-      const hex = result.privateKey.toString(16).padStart(64, "0");
-      const wif = toWIF(hex);
-      setFoundKey({ hex, wif });
-      setResultMsg(null);
+      handleSuccess(result.privateKey);
     } else {
       setState(LotteryState.Normal);
       setResultMsg(start);
     }
   };
 
+  // ── Infinite mode: 100% random batches via recursive setTimeout ──
+  const runInfiniteLoop = useCallback(() => {
+    if (stopRef.current) {
+      setState(LotteryState.Normal);
+      return;
+    }
+
+    const result = findOneRandomBatch(
+      selectedPuzzle.address,
+      selectedPuzzle.rangeStart,
+      selectedPuzzle.rangeEnd,
+      1000
+    );
+
+    setAttempts((n) => n + 1);
+    setKeysChecked((n) => n + 1000);
+
+    if (result.success && result.privateKey) {
+      handleSuccess(result.privateKey);
+      return;
+    }
+
+    // Yield to browser event loop so clicks (Stop) are processed
+    setTimeout(runInfiniteLoop, 0);
+  }, [selectedPuzzle]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleRoll = () => {
-    setState(LotteryState.Loading);
-    setResultMsg(null);
-    setTimeout(() => {
-      playLottery();
-    }, 10);
+    if (infiniteMode) {
+      stopRef.current = false;
+      setState(LotteryState.Running);
+      setResultMsg(null);
+      setAttempts(0);
+      setKeysChecked(0);
+      setTimeout(runInfiniteLoop, 10);
+    } else {
+      setState(LotteryState.Loading);
+      setResultMsg(null);
+      setTimeout(() => {
+        playNormal();
+      }, 10);
+    }
   };
+
+  const handleStop = () => {
+    stopRef.current = true;
+    setState(LotteryState.Normal);
+  };
+
 
   return (
     <>
@@ -215,14 +274,39 @@ function App() {
       {/* ── Main card ──────────────────────── */}
       <div className="glass-card">
 
-        {/* Roll button — shown when idle with no prior result */}
-        {state === LotteryState.Normal && resultMsg === null && (
-          <button id="roll-btn" className="roll-button" onClick={handleRoll}>
-            {content["roll-btn"]}
-          </button>
+        {/* Roll / Stop buttons + Infinite toggle (idle or not-found state) */}
+        {(state === LotteryState.Normal) && (
+          <div className="action-row">
+            <button
+              id="roll-btn"
+              className={`roll-button${resultMsg !== null ? " roll-again" : ""}`}
+              onClick={handleRoll}
+            >
+              {resultMsg !== null
+                ? (lang === "pt" ? "🎲 Tentar novamente" : "🎲 Try again")
+                : content["roll-btn"]}
+            </button>
+
+            {/* Infinite toggle */}
+            <div className="infinite-toggle-wrap" title={lang === "pt" ? "Busca infinita 100% aleatória" : "Infinite 100% random search"}>
+              <label className="infinite-toggle">
+                <input
+                  type="checkbox"
+                  checked={infiniteMode}
+                  onChange={(e) => setInfiniteMode(e.target.checked)}
+                />
+                <span className="toggle-track">
+                  <span className="toggle-thumb" />
+                </span>
+              </label>
+              <span className="infinite-label">
+                {lang === "pt" ? "Infinito" : "Infinite"}
+              </span>
+            </div>
+          </div>
         )}
 
-        {/* Loading */}
+        {/* Loading (single roll) */}
         {state === LotteryState.Loading && (
           <div className="loading-wrap">
             <div className="spinner" />
@@ -232,31 +316,33 @@ function App() {
           </div>
         )}
 
-        {/* ── NOT FOUND state ────────────────── */}
-        {state === LotteryState.Normal && resultMsg !== null && (
-          <div className="not-found-wrap">
-            <div className="not-found-badge">
-              <span className="not-found-icon">🔍</span>
-              <div>
-                <p className="not-found-title">
-                  {lang === "pt" ? "Chave não encontrada" : "Key not found"}
-                </p>
-                <p className="not-found-sub">
-                  {lang === "pt"
-                    ? "Testamos 50.000 chaves a partir desse ponto — continue tentando!"
-                    : "Tested 50,000 keys from this starting point — keep trying!"}
-                </p>
-              </div>
-            </div>
-            <div className="result-box">
-              <span className="label">
-                {lang === "pt" ? "Ponto de partida testado" : "Starting key tested"}
+        {/* Running (infinite mode) */}
+        {state === LotteryState.Running && (
+          <div className="infinite-running-wrap">
+            <div className="infinite-pulse-ring" />
+            <div className="infinite-running-info">
+              <span className="infinite-running-label">
+                {lang === "pt" ? "🔄 Busca infinita ativa" : "🔄 Infinite search active"}
               </span>
-              <span className="value">{resultMsg}</span>
+              <span className="infinite-running-sub">
+                {lang === "pt"
+                  ? "Testando chaves aleatórias continuamente..."
+                  : "Testing random keys continuously..."}
+              </span>
             </div>
-            <button id="roll-btn" className="roll-button" onClick={handleRoll}>
-              {lang === "pt" ? "🎲 Tentar novamente" : "🎲 Try again"}
+            <button className="stop-button" onClick={handleStop}>
+              ⏹ {lang === "pt" ? "Parar" : "Stop"}
             </button>
+          </div>
+        )}
+
+        {/* ── NOT FOUND result (normal mode only) ─── */}
+        {state === LotteryState.Normal && resultMsg !== null && (
+          <div className="result-box" style={{ marginTop: "0.5rem" }}>
+            <span className="label">
+              {lang === "pt" ? "Ponto de partida testado" : "Starting key tested"}
+            </span>
+            <span className="value">{resultMsg}</span>
           </div>
         )}
 
@@ -288,16 +374,14 @@ function App() {
           </div>
         )}
 
-        {/* Attempt counter */}
-        {attempts > 0 && state !== LotteryState.Success && (
+        {/* Attempt / keys counter */}
+        {(attempts > 0) && state !== LotteryState.Success && (
           <div className="attempt-counter">
-            <span>{lang === "pt" ? "Tentativas:" : "Attempts:"}</span>
+            <span>{lang === "pt" ? "Lotes:" : "Batches:"}</span>
             <strong>{attempts.toLocaleString()}</strong>
-            <span>×</span>
-            <span>50,000 keys</span>
-            <span className="dot" style={{ width: 4, height: 4, borderRadius: "50%", background: "rgba(255,255,255,0.2)" }} />
-            <strong>{(attempts * 50000).toLocaleString()}</strong>
-            <span>{lang === "pt" ? "testadas" : "tested"}</span>
+            <span className="counter-dot" />
+            <span>{lang === "pt" ? "Chaves testadas:" : "Keys tested:"}</span>
+            <strong>{keysChecked.toLocaleString()}</strong>
           </div>
         )}
       </div>

@@ -299,6 +299,169 @@
   gap: 1.2rem;
 }
 
+/* ── Action Row (Roll + Infinite toggle) ─────── */
+.action-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+
+/* ── Infinite Toggle ─────────────────────────── */
+.infinite-toggle-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.infinite-toggle {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  cursor: pointer;
+}
+
+.infinite-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.toggle-track {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  transition: all 0.25s;
+}
+
+.infinite-toggle input:checked+.toggle-track {
+  background: rgba(245, 159, 0, 0.8);
+  border-color: var(--gold);
+  box-shadow: 0 0 10px rgba(245, 159, 0, 0.4);
+}
+
+.toggle-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.infinite-toggle input:checked~.toggle-track .toggle-thumb {
+  transform: translateX(20px);
+}
+
+.infinite-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: color 0.2s;
+}
+
+.infinite-toggle-wrap:has(input:checked) .infinite-label {
+  color: var(--gold-light);
+}
+
+/* ── Infinite Running State ──────────────────── */
+.infinite-running-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  position: relative;
+}
+
+.infinite-pulse-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  border: 2px solid rgba(245, 159, 0, 0.3);
+  animation: pulse-ring 1.5s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: translate(-50%, -50%) scale(0.8);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translate(-50%, -50%) scale(1.5);
+    opacity: 0;
+  }
+}
+
+.infinite-running-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+}
+
+.infinite-running-label {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--gold-light);
+  animation: fade-pulse 1.2s ease-in-out infinite;
+}
+
+.infinite-running-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* ── Stop Button ─────────────────────────────── */
+.stop-button {
+  background: rgba(220, 38, 38, 0.15);
+  border: 1px solid rgba(220, 38, 38, 0.5);
+  color: #fca5a5;
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 12px 36px;
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.stop-button:hover {
+  background: rgba(220, 38, 38, 0.3);
+  border-color: rgba(220, 38, 38, 0.8);
+  color: #fff;
+  transform: scale(1.04);
+  box-shadow: 0 0 24px rgba(220, 38, 38, 0.4);
+}
+
+/* ── Counter dot ─────────────────────────────── */
+.counter-dot {
+  display: inline-block;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  margin: 0 2px;
+}
+
 /* ── Roll Button ─────────────────────────────── */
 .roll-button {
   background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);

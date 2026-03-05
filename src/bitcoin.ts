@@ -75,3 +75,30 @@ export const toWIF = (privCoin: string) => {
   const wif = ECPair.fromPrivateKey(Buffer.from(privCoin, "hex")).toWIF();
   return wif;
 };
+
+/**
+ * Testa N chaves 100% aleatórias dentro do range especificado (modo infinito).
+ * Diferente do findPrivateKey que é sequencial, cada chave aqui é gerada de
+ * forma independente via window.crypto — pura sorte a cada tentativa.
+ *
+ * @param goalAddress - Endereço Bitcoin alvo
+ * @param rangeStart  - Hex do início do range (sem 0x)
+ * @param rangeEnd    - Hex do fim do range (sem 0x)
+ * @param batchSize   - Quantas chaves aleatórias testar neste lote
+ */
+export const findOneRandomBatch = (
+  goalAddress: string,
+  rangeStart: string,
+  rangeEnd: string,
+  batchSize = 1000
+): { success: boolean; privateKey?: bigint; triedKey?: string } => {
+  for (let i = 0; i < batchSize; i++) {
+    const keyHex = random32ByteRange(rangeStart, rangeEnd);
+    const address = generate_address_from_priv(keyHex);
+    if (address === goalAddress) {
+      return { success: true, privateKey: BigInt("0x" + keyHex), triedKey: keyHex };
+    }
+  }
+  return { success: false };
+};
+
