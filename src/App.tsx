@@ -651,13 +651,13 @@ function App() {
                     ? "¡NO hagas una transacción directa! Lee sobre Kangaroos antes de mover los BTC."
                     : "DO NOT make a direct transaction! Read about Kangaroos before moving the BTC."}
                 {" "}
-                <a href={lang === "pt" ? "./education-pt" : lang === "es" ? "./education-es" : "./education"} target="_blank" rel="noreferrer">
+                <a href={lang === "pt" ? "./education-pt.html" : lang === "es" ? "./education-es.html" : "./education.html"} target="_blank" rel="noreferrer">
                   {lang === "pt" ? "Saiba mais →" : lang === "es" ? "Saber más →" : "Learn more →"}
                 </a>
               </div>
               <a
                 className="tx-builder-link"
-                href={`./tx-builder?wif=${encodeURIComponent(foundKey.wif)}&hex=${encodeURIComponent(foundKey.hex)}`}
+                href={`${import.meta.env.BASE_URL}tx-builder.html?wif=${encodeURIComponent(foundKey.wif)}&hex=${encodeURIComponent(foundKey.hex)}`}
                 target="_blank"
                 rel="noreferrer"
               >
