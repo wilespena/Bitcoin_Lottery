@@ -1,5 +1,8 @@
-/tx-builder    /tx-builder.html   200
-/education     /education.html    200
-/education-pt  /education-pt.html 200
-/education-es  /education-es.html 200
-/*             /index.html        200
+/tx-builder /tx-builder.html 200
+/tx-builder.html /tx-builder.html 200
+/education /education.html 200
+/education.html /education.html 200
+/education-pt /education-pt.html 200
+/education-pt.html /education-pt.html 200
+/education-es /education-es.html 200
+/education-es.html /education-es.html 200
