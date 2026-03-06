@@ -657,9 +657,12 @@ function App() {
               </div>
               <a
                 className="tx-builder-link"
-                href={`${import.meta.env.BASE_URL}tx-builder.html?wif=${encodeURIComponent(foundKey.wif)}&hex=${encodeURIComponent(foundKey.hex)}`}
-                target="_blank"
-                rel="noreferrer"
+                href={`tx-builder.html?wif=${encodeURIComponent(foundKey.wif)}&hex=${encodeURIComponent(foundKey.hex)}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  const base = window.location.href.split('?')[0].replace(/\/?(index\.html)?$/, '');
+                  window.open(`${base}/tx-builder.html?wif=${encodeURIComponent(foundKey.wif)}&hex=${encodeURIComponent(foundKey.hex)}`, '_blank');
+                }}
               >
                 ⚡ {lang === "pt" ? "Gerar transação para MARA Slipstream" : lang === "es" ? "Generar transacción para MARA Slipstream" : "Build Transaction for MARA Slipstream"}
               </a>

@@ -41,7 +41,7 @@ export default function TxBuilder() {
     const [feeRates, setFeeRates] = useState<FeeRates | null>(null);
     const [fetchingFees, setFetchingFees] = useState(false);
     // MARA Slipstream minimum: max(2 × priority fee, 2 sat/vB)
-    const maraMin = feeRates ? Math.max(Math.ceil(feeRates.halfHourFee * 2), 2) : 2;
+    const maraMin = feeRates ? Math.max(Math.ceil(feeRates.fastestFee * 2), 2) : 2;
 
     const [rawHex, setRawHex] = useState<string | null>(null);
     const [buildError, setBuildError] = useState<string | null>(null);
@@ -71,8 +71,8 @@ export default function TxBuilder() {
             .then((r) => r.json())
             .then((data: FeeRates) => {
                 setFeeRates(data);
-                // Pre-fill with MARA minimum
-                const min = Math.max(Math.ceil(data.halfHourFee * 2), 2);
+                // Pre-fill with MARA minimum (2x highest priority)
+                const min = Math.max(Math.ceil(data.fastestFee * 2), 2);
                 setFeeRate(String(min));
             })
             .catch(() => { /* keep default 2 */ })
@@ -434,7 +434,7 @@ export default function TxBuilder() {
                                 className={`tx-fee-preset ${feeRate === String(maraMin * 2) ? "selected" : ""}`}
                                 onClick={() => setFeeRate(String(maraMin * 2))}
                             >
-                                <span className="preset-label">Priority ⚡</span>
+                                <span className="preset-label">2X ⚡</span>
                                 <span className="preset-rate">{maraMin * 2} sat/vB</span>
                                 <span className="preset-sub">2× MARA min</span>
                             </button>
@@ -442,7 +442,7 @@ export default function TxBuilder() {
                                 className={`tx-fee-preset ${feeRate === String(maraMin * 3) ? "selected" : ""}`}
                                 onClick={() => setFeeRate(String(maraMin * 3))}
                             >
-                                <span className="preset-label">Fast 🚀</span>
+                                <span className="preset-label">3X 🚀</span>
                                 <span className="preset-rate">{maraMin * 3} sat/vB</span>
                                 <span className="preset-sub">3× MARA min</span>
                             </button>
