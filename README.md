@@ -2,19 +2,29 @@
 
 Uma loteria de código aberto que tenta resolver os [Bitcoin Puzzles](https://privatekeys.pw/puzzles/bitcoin-puzzle-tx), varrendo o espaço de chaves privadas em busca do endereço alvo e sua recompensa.
 
-> **100% no navegador** — nenhuma chave ou dado é enviado a servidores. Todo o processamento usa a CPU do próprio usuário.
+> **100% no navegador e seguro** — nenhuma chave ou dado é enviado a servidores de terceiros. Todo o processamento usa a CPU do seu dispositivo.
+
+---
+
+## ✨ Novidades e Recursos
+- **UI Moderna (Glassmorphism):** Design refinado com drop-blur, dark-mode nativo e componentes estilizados para melhor visibilidade em longa bateria de testes.
+- **Saldo ao Vivo (Live Balance):** O App se conecta à API da `mempool.space` e mostra quantos BTC existem no exato momento na carteira do puzzle. Ignorando automaticamente puzzles já resolvidos (0 SATS).
+- **Custom Wallet Search (Busca Customizada):** Adicionado suporte para você inserir *qualquer address* Bitcoin e definir o range hex manualmente para realizar as buscas.
+- **TxBuilder In-Browser:** Se você achar a chave, o app possui um `TxBuilder` robusto e nativo capaz de gerar uma transação RAW.
+- **Integração MARA Slipstream:** Transmita suas moedas direto para as piscinas de mineração da MARA, evitando robôs ladrões de mempool pública, usando o auto-submit + tracker da API oficial (Slipstream).
 
 ---
 
 ## 🎯 Puzzles Disponíveis
 
-| Puzzle | Endereço | Recompensa | Intervalo |
+| Puzzle | Endereço | Recompensa (Live) | Intervalo Padrão |
 |---|---|---|---|
-| **#20** *(resolvido — teste)* | `1HsMJxNiV7TLxmoF6uJNkydxPFDog4NQum` | — | `80000` → `fffff` |
-| **#71** *(padrão)* | `1PWo3JeB9jrGwfHDNpdGK54CRas7fsVzXU` | 7.1 BTC | `400000000000000000` → `7fffffffffffffffff` |
-| **#72** | `1JTK7s9YVYywfm5XUH7RNhHJH1LshCaRFR` | 7.2 BTC | `800000000000000000` → `ffffffffffffffffff` |
-| **#73** | `12VVRNPi4SJqUTsp6FmqDqY5sGosDtysn4` | 7.3 BTC | `1000000000000000000` → `1ffffffffffffffffff` |
-| **#74** | `1FWGcVDK3JGzCC3WtkYetULPszMaK2Jksv` | 7.4 BTC | `2000000000000000000` → `3ffffffffffffffffff` |
+| **#20** *(resolvido)* | `1HsMJxNiV7TLxmoF6uJNkydxPFDog4NQum` | — | `80` → `ff` |
+| **#71** | `1PWo3JeB9jrGwfHDNpdGK54CRas7fsVzXU` | ~ 7.1 BTC | `40000..00` → `7ffff..ff` |
+| **#72** | `1JTK7s9YVYywfm5XUH7RNhHJH1LshCaRFR` | ~ 7.2 BTC | `80000..00` → `fffff..ff` |
+| **#73** | `12VVRNPi4SJqUTsp6FmqDqY5sGosDtysn4` | ~ 7.3 BTC | `10000..00` → `1ffff..ff` |
+| **#74** | `1FWGcVDK3JGzCC3WtkYetULPszMaK2Jksv` | ~ 7.4 BTC | `20000..00` → `3ffff..ff` |
+| **Custom** | `(A sua escolha)` | `(Consulta)` | `Customizável` |
 
 ---
 
@@ -22,21 +32,10 @@ Uma loteria de código aberto que tenta resolver os [Bitcoin Puzzles](https://pr
 
 - **React 18** + **TypeScript 5**
 - **Vite 7** (bundler)
-- **bitcoinjs-lib** — geração de endereços P2PKH
-- **tiny-secp256k1** — operações de curva elíptica secp256k1
-- **ecpair** — manipulação de pares de chaves (WIF export)
-- **ESLint 9** + **typescript-eslint 8** (flat config)
-
----
-
-## 📦 Instalação
-
-**Pré-requisitos:** Node.js 18+ e npm 9+
-
-```bash
-cd bitcoin-lottery
-npm install
-```
+- **bitcoinjs-lib** — transações P2PKH, geração e scriptSig handling
+- **tiny-secp256k1** — operações de curva elíptica ultra-rápidas
+- **mempool.space API** — saldos on-chain e tarifas de mineração
+- **MARA Slipstream** — Montagem de transações nativas otimizadas para a piscina de mineração profunda
 
 ---
 
@@ -44,98 +43,41 @@ npm install
 
 | Comando | O que faz |
 |---|---|
-| `npm run dev` | Dev com hot reload → [localhost:5173/bitcoin-lottery](http://localhost:5173/bitcoin-lottery) |
-| `npm start` | Build + preview → [localhost:4173/bitcoin-lottery](http://localhost:4173/bitcoin-lottery) |
+| `npm run dev` | Dev com hot reload → [localhost:5173/](http://localhost:5173/) |
+| `npm start` | Build + preview → [localhost:4173/](http://localhost:4173/) |
 | `npm run build` | Apenas gera o bundle em `dist/` |
-| `npm run preview` | Serve um build existente sem rebuildar |
-| `npm run lint` | Verifica o código com ESLint 9 |
 
 ---
 
-## 🌍 Deploy
+## ⚙️ Modos de Busca da Loteria
 
-### Cloudflare Pages
-O projeto detecta automaticamente o ambiente via `CF_PAGES=1` e ajusta o `base` path para `/` (raiz). Basta conectar o repositório no Cloudflare Pages — o deploy é automático em cada push.
+**1. Modo Manual (Dice / Single Batch)**
+Sorteia um ponto de partida aleatório e testa 50.000 chaves de forma sequencial parando ao fim. Ideal para testes de calor.
 
-### GitHub Pages
-```bash
-npm run deploy
-```
-Executa o build e publica via `gh-pages`. O `base` path é `/bitcoin-lottery`.
+**2. Modo ∞ Aleatório (Infinite Random)** 
+Testa Lotes de 1.000 chaves de forma 100% caótica e estocástica sem parar. Máxima dispersão no Range.
 
----
-
-## 📁 Estrutura do Projeto
-
-```
-bitcoin-lottery/
-├── src/
-│   ├── App.tsx              # UI principal + lógica do jogo
-│   ├── App.css              # Estilos do app (glassmorphism, animações)
-│   ├── index.css            # Reset global + variáveis CSS + Google Fonts
-│   ├── bitcoin.ts           # Funções Bitcoin: endereço, busca, WIF
-│   ├── main.tsx             # Entry point do React
-│   ├── assets/
-│   │   └── bitcoin.png      # Ícone do Bitcoin
-│   └── languages/
-│       ├── english.ts       # Textos em inglês
-│       └── portuguese.ts    # Textos em português
-├── education.html           # Página educativa (EN): Kangaroo method
-├── education-pt.html        # Página educativa (PT)
-├── eslint.config.js         # ESLint 9 flat config
-├── vite.config.ts           # Configuração Vite (base path automático)
-└── package.json
-```
+**3. Modo ∞ Sequencial (Infinite Sequential)** 
+Sorteia um Seedpoint aleatório gigantesco e começa a varrer chaves em sequência matemática ininterruptamente. Permite ao usuário editar o "Batch Size" se o PC aguentar.
 
 ---
 
-## 🔑 Como Funciona o Código
+## 🛡️ Como Funciona o TxBuilder e Resgate Seguro (MARA)
 
-### Modos de Busca
+Se você der a sorte grande e a interface estourar o modal de **SUCCESS**:
+1. O App nunca fará requisições usando a sua chave.
+2. Você pode clicar no botão de `⚡ Build Transaction` que abrirá nosso **TxBuilder local**.
+3. O TxBuilder fará o fetch do seu próprio saldo, UTXO e Fee.
+4. **Calculo de Troco (Change Addr):** Seguindo o padrão Bitcoin (Electrum-like), a engine construirá **2 Outputs**, enviando exatamente os Satoshis para sua conta fria, e mandando o troco exato (descontando a taxa) de volta para você.
+5. Em seguida, ele lhe entregará o Buffer (HEX Code) Limpo. Você mesmo fará a submissão colando o código no portal da oficial da corretora **Slipstream da Marathon Digital (MARA)**, protegendo seus fundos contra `Fee-Sniping` (roubo de mempool).
 
-**Modo Normal** — ponto aleatório + 50.000 sequencial:
-```
-1. Sorteia um ponto de partida aleatório dentro do range
-2. Testa as 50.000 chaves seguintes, incrementando sequencialmente
-3. Exibe o resultado e aguarda novo clique
-```
-
-**Modo Infinito** — 100% aleatório em loop contínuo:
-```
-1. Ativa o toggle "Infinito" ao lado do botão Roll
-2. A cada lote: gera 1.000 chaves completamente aleatórias via window.crypto
-3. Continua automaticamente até encontrar a chave ou clicar "Stop"
-```
-
-### `src/bitcoin.ts`
-
-| Função | Descrição |
-|---|---|
-| `generate_address_from_priv(key)` | Deriva o endereço Bitcoin P2PKH a partir de uma chave privada hex |
-| `random32Byte()` | Gera 32 bytes aleatórios via `window.crypto` (CSPRNG) |
-| `random32ByteRange(min, max)` | Sorteia uma chave aleatória dentro de um intervalo hex |
-| `findPrivateKey(start, address)` | Itera 50.000 chaves sequencialmente a partir de `start` |
-| `findOneRandomBatch(address, min, max, n)` | Testa `n` chaves 100% aleatórias (modo infinito) |
-| `toWIF(privKey)` | Converte chave privada hex para WIF (importável em carteiras) |
-
----
-
-## 🔒 Segurança
-
-- Todo processamento é feito **100% no browser** — zero requisições a servidores
-- A aleatoriedade usa `window.crypto.getRandomValues()` (CSPRNG do browser)
-- **Vulnerabilidades conhecidas (build-time only):** 6 de severidade *low*, todas transitivas via `vite-plugin-node-polyfills → elliptic`. Não afetam o bundle de produção
-
-> ⚠️ **Se você encontrar a chave:** NÃO faça uma transação direta! Leia sobre o método Kangaroo antes — bots monitoram a mempool e podem roubar os BTC. Consulte as páginas `education.html` / `education-pt.html`.
+> ⚠️ Leia obrigatoriamente a página "Education" (O que é e cuidados) se for novato. Bots monitoram redes abertas.
 
 ---
 
 ## 🌐 Multi-idioma
-
-Interface em **inglês** e **português**. Detectado automaticamente por `navigator.language`, ou selecionável pelos botões 🇺🇸 / 🇧🇷 no topo.
+Interface construída via arrays em **Inglês**, **Português**, e **Espanhol**.
 
 ---
-
 ## 📜 Licença
-
 MIT

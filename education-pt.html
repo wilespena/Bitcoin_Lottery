@@ -346,30 +346,23 @@
     <div class="step">
       <div class="step-num">4</div>
       <div class="step-body">
-        <strong>Envie diretamente para o MARA Slipstream.</strong><br>
-        Clique no botão verde <em>"🚀 Submit to MARA Slipstream API"</em> no construtor.
-        Isso envia sua transação diretamente e com segurança para a mempool privada da MARA através da API oficial
-        deles.
-        Como alternativa, você pode copiar o hex bruto e enviá-lo manualmente no site deles.
+        <strong>Copie o Payload e Envie no MARA Slipstream.</strong><br>
+        O TxBuilder NÃO enviará a transação automaticamente para prevenir bloqueios no navegador. Em vez disso,
+        ele gerará o código HEX (sua transação criptografada pura). Clique no botão <em>"Copy"</em> ou no link para
+        abrir
+        o portal oficial <a href="https://slipstream.mara.com/" target="_blank" rel="noreferrer">Slipstream MARA</a>
+        em uma nova aba. Cole o código lá e clique em Submeter.
       </div>
     </div>
 
     <div class="step">
       <div class="step-num">5</div>
       <div class="step-body">
-        <strong>Acompanhe o status e aguarde.</strong><br>
-        Após o envio, o construtor vira um Painel de Rastreamento (Tracker) que checa o status a cada 30 segundos.
-        Ele vai te avisar quando a MARA programar sua transação para o próximo bloco deles.
-        Quando for minerado, sua transação estará confirmada na blockchain de forma rápida e segura.
-      </div>
-    </div>
-
-    <div class="step">
-      <div class="step-num">6</div>
-      <div class="step-body">
         <strong>Mova seus fundos para uma carteira fria.</strong><br>
-        Após a primeira confirmação, envie os BTC do novo endereço para sua carteira fria definitiva e segura.
-        A partir daqui, qualquer transação normal é 100% segura.
+        A MARA te avisará o status do bloco lá no site deles. Após a primeira confirmação na blockchain ser efetivada,
+        envie urgentemente os BTC da sua nova conta intermediária que você forneceu no input do construtor, para sua
+        carteira fria permanente e inviolável (Hardware wallet).
+        A partir daqui, qualquer transação na rede normal é 100% segura.
       </div>
     </div>
 
@@ -378,9 +371,9 @@
       <p style="margin:0">
         O Construtor de Transações puxa <code>mempool.space/api/v1/fees/recommended</code> ao carregar.
         O mínimo documentado pela MARA é <strong>o maior entre 2× a taxa prioritária atual e 2 sat/vByte</strong>.
-        O construtor aplica essa fórmula automaticamente e pré-seleciona a opção Normal com o mínimo da MARA.
-        Você pode aumentar (presets Priority ou Fast) para elevar a chance da MARA incluir mais rápido —
-        mas nunca baixe abaixo do mínimo, ou sua transação será rejeitada.
+        O construtor usa essa fórmula para gerar e congelar a sua taxa em sats exata, e constrói a Raw Transaction com a
+        precisão exigida pelos pools institucionais. (Nunca diminua no input, apenas aumente caso deseje competir em
+        momentos excepcionais).
       </p>
     </div>
 

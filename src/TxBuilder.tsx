@@ -47,14 +47,6 @@ export default function TxBuilder() {
     const [buildError, setBuildError] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
 
-    // MARA API Tracking States
-    const [maraSubmitting, setMaraSubmitting] = useState(false);
-    const [maraStatus, setMaraStatus] = useState<"IDLE" | "PENDING" | "CONFIRMED" | "ERROR">("IDLE");
-    const [maraMessage, setMaraMessage] = useState<string | null>(null);
-    const [maraBlock, setMaraBlock] = useState<number | null>(null);
-    const [maraBlockHeight, setMaraBlockHeight] = useState<number | null>(null);
-    const [maraError, setMaraError] = useState<string | null>(null);
-
     // Detect private key from URL params (passed from lottery success state)
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -119,7 +111,6 @@ export default function TxBuilder() {
             })
             .catch((e: unknown) => setUtxoError("Could not fetch UTXOs from mempool.space — check your internet connection. (" + (e instanceof Error ? e.message : "network error") + ")"))
             .finally(() => setFetchingUtxos(false));
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [derivedAddress]);
 
     const selectUtxo = (u: MempoolUTXO) => {
@@ -141,9 +132,6 @@ export default function TxBuilder() {
         setRawHex(null);
         setBuildError(null);
         setCopied(false);
-        setMaraStatus("IDLE");
-        setMaraMessage(null);
-        setMaraError(null);
 
         if (!privateKey.trim()) return setBuildError("Enter a private key.");
         if (deriveError) return setBuildError(deriveError);
@@ -167,68 +155,12 @@ export default function TxBuilder() {
                 changeAddress: derivedAddress || "", // fallback de troco pra chave geradora
             });
             setRawHex(hex);
-        } catch (err: any) {
-            setBuildError(err.message || "Unknown error building transaction.");
-        }
-    };
-
-    // Auto-poll status when tx is in MARA mempool
-    useEffect(() => {
-        let interval: ReturnType<typeof setInterval>;
-
-        if (maraStatus === "PENDING" && txid) {
-            interval = setInterval(async () => {
-                try {
-                    const res = await fetch(`https://slipstream.mara.com/api/v1/tx/${txid}`);
-                    if (!res.ok) return; // Keep polling silently
-                    const data = await res.json();
-
-                    if (data.status?.confirmed) {
-                        setMaraStatus("CONFIRMED");
-                        setMaraBlockHeight(data.status.block_height);
-                        setMaraMessage("Mined! 🥳 Your transaction is confirmed on the blockchain.");
-                    } else if (data.position && data.position.block !== undefined) {
-                        setMaraBlock(data.position.block);
-                        setMaraMessage(`Waiting in MARA mempool. Estimated position: Block +${data.position.block}`);
-                    }
-                } catch (e) {
-                    console.error("Error polling MARA status:", e);
-                }
-            }, 30000); // Check every 30 seconds
-        }
-
-        return () => {
-            if (interval) clearInterval(interval);
-        };
-    }, [maraStatus, txid]);
-
-    const submitToMara = async () => {
-        if (!rawHex) return;
-        setMaraSubmitting(true);
-        setMaraError(null);
-        setMaraMessage(null);
-
-        try {
-            const res = await fetch("https://slipstream.mara.com/api/v1/submit/tx", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ tx_hex: rawHex }),
-            });
-
-            const data = await res.json();
-
-            if (!res.ok || data.status === "error") {
-                throw new Error(data.error || data.message || "Failed to submit to MARA API");
+        } catch (err: unknown) {
+            if (err instanceof Error) {
+                setBuildError(err.message || "Unknown error building transaction.");
+            } else {
+                setBuildError("Unknown error building transaction.");
             }
-
-            // Success
-            setMaraStatus("PENDING");
-            setMaraMessage("Waiting in MARA mempool. Looking up block estimation...");
-        } catch (err: any) {
-            setMaraStatus("ERROR");
-            setMaraError(err.message || "Network error. Try submitting manually on the website.");
-        } finally {
-            setMaraSubmitting(false);
         }
     };
 
@@ -478,118 +410,53 @@ export default function TxBuilder() {
                             <div className="tx-fee-row" style={{ marginTop: '4px', paddingTop: '4px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
                                 <span>Change (Back to you)</span>
                                 <strong className={changeSats >= 0 ? "tx-plus" : "tx-error"}>
-                                    {changeSats.toLocaleString()} sats
+                                    {changeSats > 0 ? `+ ${changeSats.toLocaleString()} sats` : `${changeSats.toLocaleString()} sats`}
                                 </strong>
                             </div>
-                            {changeSats < 0 && (
-                                <p className="tx-error" style={{ fontSize: '11px', textAlign: 'right', marginTop: '2px' }}>
-                                    Negative change. Reduce amount or fee.
-                                </p>
-                            )}
-                            {changeSats > 0 && changeSats < 546 && (
-                                <p className="tx-bad" style={{ fontSize: '11px', textAlign: 'right', marginTop: '2px' }}>
-                                    ⚠️ Change &lt; 546 sats (Dust) will become miner fee.
-                                </p>
-                            )}
                         </div>
                     </div>
-                </div>
 
-                {/* Generate Button */}
-                <button className="tx-generate-btn" onClick={handleGenerate}>
-                    🔑 Generate Signed Raw Transaction
-                </button>
+                    <button className="tx-submit-btn" onClick={handleGenerate}>
+                        🔑 Generate Signed Raw Transaction
+                    </button>
 
-                {buildError && (
-                    <div className="tx-error-box">⚠️ {buildError}</div>
-                )}
+                    {buildError && (
+                        <div className="tx-error-box">⚠️ {buildError}</div>
+                    )}
 
-                {/* Output */}
-                {rawHex && (
-                    <div className="tx-output-card">
-                        <div className="tx-output-header">
-                            <span className="tx-output-title">✅ Signed Raw Transaction (Hex)</span>
-                            <button className="tx-copy-btn" onClick={handleCopy}>
-                                {copied ? "✓ Copied!" : "Copy"}
-                            </button>
-                        </div>
-                        <textarea
-                            className="tx-hex-area tx-mono"
-                            readOnly
-                            value={rawHex}
-                            rows={3}
-                            onClick={(e) => (e.target as HTMLTextAreaElement).select()}
-                        />
+                    {/* Output */}
+                    {rawHex && (
+                        <div className="tx-output-card">
+                            <div className="tx-output-header">
+                                <span className="tx-output-title">✅ Signed Raw Transaction (Hex)</span>
+                                <button className="tx-copy-btn" onClick={handleCopy}>
+                                    {copied ? "✓ Copied!" : "Copy"}
+                                </button>
+                            </div>
+                            <textarea
+                                className="tx-hex-area tx-mono"
+                                readOnly
+                                value={rawHex}
+                                rows={3}
+                                onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+                            />
 
-                        {/* MARA API Integration Panel */}
-                        <div className="tx-mara-auto-panel">
-                            {maraStatus === "IDLE" || maraStatus === "ERROR" ? (
-                                <>
-                                    <button
-                                        className="tx-submit-btn"
-                                        onClick={submitToMara}
-                                        disabled={maraSubmitting}
+                            {/* Manual Submission Fallback */}
+                            <div className="tx-mara-auto-panel">
+                                <div className="tx-output-actions" style={{ justifyContent: 'center' }}>
+                                    <a
+                                        className="tx-mara-btn manual"
+                                        href="https://slipstream.mara.com/"
+                                        target="_blank"
+                                        rel="noreferrer"
                                     >
-                                        {maraSubmitting ? "⏳ Submitting..." : "🚀 Submit to MARA Slipstream API"}
-                                    </button>
-
-                                    {maraError && (
-                                        <div className="tx-mara-error">
-                                            <span>❌ Rejected:</span> {maraError}
-                                        </div>
-                                    )}
-
-                                    <div className="tx-mara-divider">
-                                        <span>OR</span>
-                                    </div>
-                                    <div className="tx-output-actions">
-                                        <a
-                                            className="tx-mara-btn manual"
-                                            href="https://slipstream.mara.com/"
-                                            target="_blank"
-                                            rel="noreferrer"
-                                        >
-                                            ⛏ Open Website to submit manually →
-                                        </a>
-                                    </div>
-                                </>
-                            ) : (
-                                <div className={`tx-tracker-panel ${maraStatus === "CONFIRMED" ? "confirmed" : "pending"}`}>
-                                    <div className="tx-tracker-header">
-                                        <span className="tx-tracker-icon">
-                                            {maraStatus === "PENDING" ? "🕵️‍♂️" : "🎉"}
-                                        </span>
-                                        <span className="tx-tracker-title">
-                                            {maraStatus === "PENDING" ? "Tracking Transaction" : "Transaction Mined!"}
-                                        </span>
-                                        {maraStatus === "PENDING" && <span className="tx-tracker-spinner"></span>}
-                                    </div>
-
-                                    <div className="tx-tracker-body">
-                                        <p>{maraMessage}</p>
-
-                                        {maraStatus === "PENDING" && maraBlock === 0 && (
-                                            <div className="tx-tracker-alert">
-                                                🔥 MARA is preparing to mine this in their <strong>next block</strong>!
-                                            </div>
-                                        )}
-
-                                        {maraStatus === "CONFIRMED" && (
-                                            <a
-                                                className="tx-tracker-link"
-                                                href={`https://mempool.space/tx/${txid}`}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                            >
-                                                View on mempool.space Block #{maraBlockHeight} →
-                                            </a>
-                                        )}
-                                    </div>
+                                        ⛏ Open Website to submit manually →
+                                    </a>
                                 </div>
-                            )}
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )}
+                </div>
 
                 {/* Footer */}
                 <div className="tx-footer">
