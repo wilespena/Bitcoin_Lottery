@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { buildRawTransaction, deriveFromKey } from "./bitcoin";
 import "./App.css";
 
@@ -49,6 +49,14 @@ export default function TxBuilder() {
     const [rawHex, setRawHex] = useState<string | null>(null);
     const [buildError, setBuildError] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
+
+    // MARA API Tracking States
+    const [maraSubmitting, setMaraSubmitting] = useState(false);
+    const [maraStatus, setMaraStatus] = useState<"IDLE" | "PENDING" | "CONFIRMED" | "ERROR">("IDLE");
+    const [maraMessage, setMaraMessage] = useState<string | null>(null);
+    const [maraBlock, setMaraBlock] = useState<number | null>(null);
+    const [maraBlockHeight, setMaraBlockHeight] = useState<number | null>(null);
+    const [maraError, setMaraError] = useState<string | null>(null);
 
     // Detect private key from URL params (passed from lottery success state)
     useEffect(() => {
@@ -127,9 +135,13 @@ export default function TxBuilder() {
     const feeSats = Math.round(parseFloat(feeRate || "0") * ESTIMATED_TX_BYTES);
     const outputSats = amountSats - feeSats;
 
-    const handleGenerate = useCallback(() => {
+    const handleGenerate = async () => {
         setRawHex(null);
         setBuildError(null);
+        setCopied(false);
+        setMaraStatus("IDLE");
+        setMaraMessage(null);
+        setMaraError(null);
 
         if (!privateKey.trim()) return setBuildError("Enter a private key.");
         if (deriveError) return setBuildError(deriveError);
@@ -150,10 +162,70 @@ export default function TxBuilder() {
                 privateKey: privateKey.trim(),
             });
             setRawHex(hex);
-        } catch (e: unknown) {
-            setBuildError("Error building transaction: " + (e instanceof Error ? e.message : String(e)));
+        } catch (err: any) {
+            setBuildError(err.message || "Unknown error building transaction.");
         }
-    }, [privateKey, deriveError, txid, vout, amountBtc, amountSats, destAddress, feeRate, feeSats, outputSats]);
+    };
+
+    // Auto-poll status when tx is in MARA mempool
+    useEffect(() => {
+        let interval: ReturnType<typeof setInterval>;
+
+        if (maraStatus === "PENDING" && txid) {
+            interval = setInterval(async () => {
+                try {
+                    const res = await fetch(`https://slipstream.mara.com/api/v1/tx/${txid}`);
+                    if (!res.ok) return; // Keep polling silently
+                    const data = await res.json();
+
+                    if (data.status?.confirmed) {
+                        setMaraStatus("CONFIRMED");
+                        setMaraBlockHeight(data.status.block_height);
+                        setMaraMessage("Mined! 🥳 Your transaction is confirmed on the blockchain.");
+                    } else if (data.position && data.position.block !== undefined) {
+                        setMaraBlock(data.position.block);
+                        setMaraMessage(`Waiting in MARA mempool. Estimated position: Block +${data.position.block}`);
+                    }
+                } catch (e) {
+                    console.error("Error polling MARA status:", e);
+                }
+            }, 30000); // Check every 30 seconds
+        }
+
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [maraStatus, txid]);
+
+    const submitToMara = async () => {
+        if (!rawHex) return;
+        setMaraSubmitting(true);
+        setMaraError(null);
+        setMaraMessage(null);
+
+        try {
+            const res = await fetch("https://slipstream.mara.com/api/v1/submit/tx", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ tx_hex: rawHex }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok || data.status === "error") {
+                throw new Error(data.error || data.message || "Failed to submit to MARA API");
+            }
+
+            // Success
+            setMaraStatus("PENDING");
+            setMaraMessage("Waiting in MARA mempool. Looking up block estimation...");
+        } catch (err: any) {
+            setMaraStatus("ERROR");
+            setMaraError(err.message || "Network error. Try submitting manually on the website.");
+        } finally {
+            setMaraSubmitting(false);
+        }
+    };
 
     const handleCopy = () => {
         if (!rawHex) return;
@@ -419,22 +491,76 @@ export default function TxBuilder() {
                             className="tx-hex-area tx-mono"
                             readOnly
                             value={rawHex}
-                            rows={5}
+                            rows={3}
                             onClick={(e) => (e.target as HTMLTextAreaElement).select()}
                         />
-                        <div className="tx-output-actions">
-                            <a
-                                className="tx-mara-btn"
-                                href="https://slipstream.mara.com/"
-                                target="_blank"
-                                rel="noreferrer"
-                            >
-                                ⛏ Open MARA Slipstream →
-                            </a>
-                            <p className="tx-mara-note">
-                                Paste the hex above into MARA Slipstream's form. Your transaction will be
-                                mined silently — the public key is only revealed after confirmation.
-                            </p>
+
+                        {/* MARA API Integration Panel */}
+                        <div className="tx-mara-auto-panel">
+                            {maraStatus === "IDLE" || maraStatus === "ERROR" ? (
+                                <>
+                                    <button
+                                        className="tx-submit-btn"
+                                        onClick={submitToMara}
+                                        disabled={maraSubmitting}
+                                    >
+                                        {maraSubmitting ? "⏳ Submitting..." : "🚀 Submit to MARA Slipstream API"}
+                                    </button>
+
+                                    {maraError && (
+                                        <div className="tx-mara-error">
+                                            <span>❌ Rejected:</span> {maraError}
+                                        </div>
+                                    )}
+
+                                    <div className="tx-mara-divider">
+                                        <span>OR</span>
+                                    </div>
+                                    <div className="tx-output-actions">
+                                        <a
+                                            className="tx-mara-btn manual"
+                                            href="https://slipstream.mara.com/"
+                                            target="_blank"
+                                            rel="noreferrer"
+                                        >
+                                            ⛏ Open Website to submit manually →
+                                        </a>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className={`tx-tracker-panel ${maraStatus === "CONFIRMED" ? "confirmed" : "pending"}`}>
+                                    <div className="tx-tracker-header">
+                                        <span className="tx-tracker-icon">
+                                            {maraStatus === "PENDING" ? "🕵️‍♂️" : "🎉"}
+                                        </span>
+                                        <span className="tx-tracker-title">
+                                            {maraStatus === "PENDING" ? "Tracking Transaction" : "Transaction Mined!"}
+                                        </span>
+                                        {maraStatus === "PENDING" && <span className="tx-tracker-spinner"></span>}
+                                    </div>
+
+                                    <div className="tx-tracker-body">
+                                        <p>{maraMessage}</p>
+
+                                        {maraStatus === "PENDING" && maraBlock === 0 && (
+                                            <div className="tx-tracker-alert">
+                                                🔥 MARA is preparing to mine this in their <strong>next block</strong>!
+                                            </div>
+                                        )}
+
+                                        {maraStatus === "CONFIRMED" && (
+                                            <a
+                                                className="tx-tracker-link"
+                                                href={`https://mempool.space/tx/${txid}`}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                            >
+                                                View on mempool.space Block #{maraBlockHeight} →
+                                            </a>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}

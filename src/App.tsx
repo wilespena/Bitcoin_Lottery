@@ -70,7 +70,11 @@ function App() {
   const [state, setState] = useState(LotteryState.Normal);
   const [lang, setLang] = useState<"en" | "pt" | "es">("en");
   const content = lang === "pt" ? ptContent : lang === "es" ? esContent : englishContent;
+
+  // Real-time balances from mempool
+  const [liveBalances, setLiveBalances] = useState<Record<string, string>>({});
   const [selectedPuzzle, setSelectedPuzzle] = useState<Puzzle>(PUZZLES[1]);
+
   const [searchMode, setSearchMode] = useState<SearchMode>("manual");
   const [batchSize, setBatchSize] = useState(50000);
   const [batchInput, setBatchInput] = useState("50000");
@@ -79,6 +83,11 @@ function App() {
   const [keysChecked, setKeysChecked] = useState(0);
   const [keysPerSec, setKeysPerSec] = useState(0);
   const [foundKey, setFoundKey] = useState<{ hex: string; wif: string } | null>(null);
+
+  // Custom Wallet support
+  const [isCustomPuzzle, setIsCustomPuzzle] = useState(false);
+  const [customAddressInput, setCustomAddressInput] = useState("");
+
   const [customRange, setCustomRange] = useState<{ start: string; end: string } | null>(null);
   const [editingRange, setEditingRange] = useState(false);
   const [rangeInputStart, setRangeInputStart] = useState("");
@@ -100,20 +109,52 @@ function App() {
   );
 
   useEffect(() => {
-    const queryParams = new URLSearchParams(window.location.search);
-    const paramLang = queryParams.get("lang");
-    if (paramLang === "pt" || paramLang === "pt-br") {
-      setLang("pt");
-    } else if (paramLang === "en") {
-      setLang("en");
-    } else if (paramLang === "es") {
-      setLang("es");
-    } else {
-      const userLang = navigator.language || "en";
-      if (/^pt/i.test(userLang)) setLang("pt");
-      else if (/^es/i.test(userLang)) setLang("es");
-      else setLang("en");
+    // Check URL params
+    const params = new URLSearchParams(window.location.search);
+    const paramLang = params.get("lang");
+
+    const init = () => {
+      if (paramLang === "pt") {
+        setLang("pt");
+      } else if (paramLang === "en") {
+        setLang("en");
+      } else if (paramLang === "es") {
+        setLang("es");
+      } else {
+        const userLang = navigator.language || "en";
+        if (/^pt/i.test(userLang)) setLang("pt");
+        else if (/^es/i.test(userLang)) setLang("es");
+        else setLang("en");
+      }
     }
+    init();
+    init();
+
+    // Fetch live balances for unsolved puzzles
+    const fetchBalances = async () => {
+      const balances: Record<string, string> = {};
+      for (const p of PUZZLES) {
+        if (p.number === 20 || p.solved) continue; // Skip test/solved puzzles
+        try {
+          const res = await fetch(`https://mempool.space/api/address/${p.address}`);
+          if (res.ok) {
+            const data = await res.json();
+            const totalSats = data.chain_stats.funded_txo_sum - data.chain_stats.spent_txo_sum;
+
+            if (totalSats === 0) {
+              balances[p.address] = "0 BTC (Solved)";
+            } else {
+              balances[p.address] = satsToDisplay(totalSats);
+            }
+          }
+        } catch (e) {
+          console.error("Failed to fetch balance for", p.address);
+        }
+      }
+      setLiveBalances(balances);
+    };
+
+    fetchBalances();
   }, []);
 
   const resetState = () => {
@@ -128,7 +169,9 @@ function App() {
   // Active range: custom if set, else puzzle default
   const activeRange = customRange
     ? { rangeStart: customRange.start, rangeEnd: customRange.end }
-    : { rangeStart: selectedPuzzle.rangeStart, rangeEnd: selectedPuzzle.rangeEnd };
+    : isCustomPuzzle
+      ? { rangeStart: "", rangeEnd: "" }
+      : { rangeStart: selectedPuzzle.rangeStart, rangeEnd: selectedPuzzle.rangeEnd };
 
   const openRangeEditor = () => {
     setRangeInputStart(activeRange.rangeStart);
@@ -161,12 +204,21 @@ function App() {
     resetState();
   };
 
-  const handleSelectPuzzle = (puzzle: Puzzle) => {
+  const handleSelectPuzzle = (val: string | Puzzle) => {
     stopRef.current = true;
-    setSelectedPuzzle(puzzle);
-    setCustomRange(null);
-    setEditingRange(false);
-    setRangeError(null);
+    if (val === "custom") {
+      setIsCustomPuzzle(true);
+      setCustomAddressInput("");
+      setCustomRange(null);
+      setEditingRange(false);
+      setRangeError(null);
+    } else {
+      setIsCustomPuzzle(false);
+      setSelectedPuzzle(val as Puzzle);
+      setCustomRange(null);
+      setEditingRange(false);
+      setRangeError(null);
+    }
     resetState();
   };
 
@@ -179,17 +231,24 @@ function App() {
     setResultMsg(null);
   };
 
+  const BTC_TO_SAT = 100_000_000;
+  function satsToDisplay(sats: number): string {
+    return (sats / BTC_TO_SAT).toFixed(8).replace(/\.?0+$/, "") + " BTC";
+  }
+
   const updateSpeed = (totalKeys: number) => {
     const elapsed = (Date.now() - startTimeRef.current) / 1000;
     if (elapsed > 0) setKeysPerSec(Math.round(totalKeys / elapsed));
   };
+
+  const activeAddress = isCustomPuzzle ? customAddressInput : selectedPuzzle.address;
 
   // ── Manual: random start + 50k sequential ────────────────────
   const playNormal = async () => {
     const start = random32ByteRange(activeRange.rangeStart, activeRange.rangeEnd);
     setAttempts((n) => n + 1);
     setKeysChecked((n) => n + 50000);
-    const result = await findPrivateKey(start, selectedPuzzle.address, 50000, activeRange.rangeEnd);
+    const result = await findPrivateKey(start, activeAddress, 50000, activeRange.rangeEnd);
     if (result.success && result.privateKey) {
       handleSuccess(result.privateKey);
     } else {
@@ -203,7 +262,7 @@ function App() {
     if (stopRef.current) { setState(LotteryState.Normal); return; }
 
     const result = findOneRandomBatch(
-      selectedPuzzle.address,
+      activeAddress,
       activeRange.rangeStart,
       activeRange.rangeEnd,
       1000
@@ -216,14 +275,14 @@ function App() {
 
     if (result.success && result.privateKey) { handleSuccess(result.privateKey); return; }
     setTimeout(runInfiniteRandom, 0);
-  }, [selectedPuzzle]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeAddress, activeRange]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Infinite sequential: random start + N sequential per batch ─
   const runInfiniteSequential = useCallback(async () => {
     if (stopRef.current) { setState(LotteryState.Normal); return; }
 
     const start = random32ByteRange(activeRange.rangeStart, activeRange.rangeEnd);
-    const result = await findPrivateKey(start, selectedPuzzle.address, batchSize, activeRange.rangeEnd);
+    const result = await findPrivateKey(start, activeAddress, batchSize, activeRange.rangeEnd);
 
     keysCheckedRef.current += batchSize;
     setAttempts((n) => n + 1);
@@ -253,6 +312,12 @@ function App() {
   };
 
   const handleRoll = () => {
+    if (isCustomPuzzle && (!customRange || !customAddressInput.trim())) {
+      setResultMsg(lang === "pt" ? "Preencha o Address e o Range Customizado." : lang === "es" ? "Complete la Dirección y el Rango." : "Fill Address and Custom Range.");
+      if (!customRange) setEditingRange(true);
+      return;
+    }
+
     if (searchMode === "manual") {
       setState(LotteryState.Loading);
       setResultMsg(null);
@@ -315,37 +380,60 @@ function App() {
             {lang === "pt" ? "Selecione o puzzle:" : lang === "es" ? "Selecciona el puzzle:" : "Select puzzle:"}
           </p>
           <div className="puzzle-selector">
-            {PUZZLES.map((puzzle) => (
-              <button
-                key={puzzle.number}
-                className={`puzzle-btn${selectedPuzzle.number === puzzle.number ? " active" : ""}${puzzle.solved ? " solved" : ""}`}
-                onClick={() => handleSelectPuzzle(puzzle)}
-                title={puzzle.address}
-              >
-                <span className="puzzle-btn-number">#{puzzle.number}</span>
-                <span className="puzzle-btn-reward">
-                  {puzzle.solved
-                    ? (lang === "pt" ? "Resolvido" : lang === "es" ? "Resuelto" : "Solved")
-                    : puzzle.reward}
-                </span>
-              </button>
-            ))}
+            {PUZZLES.map((p) => {
+              const isActive = !isCustomPuzzle && selectedPuzzle.number === p.number;
+              return (
+                <button
+                  key={p.number}
+                  className={`puzzle-btn${isActive ? " active" : ""}`}
+                  onClick={() => handleSelectPuzzle(p)}
+                >
+                  <span className="puzzle-btn-number">#{p.number}</span>
+                </button>
+              );
+            })}
+            <button
+              className={`puzzle-btn custom-btn${isCustomPuzzle ? " active" : ""}`}
+              onClick={() => handleSelectPuzzle("custom")}
+            >
+              <span className="puzzle-btn-number">🔨 Custom</span>
+            </button>
           </div>
 
           <div className="target-badge">
             <div className="target-badge-main">
-              <span className="reward">
-                {selectedPuzzle.solved
-                  ? "🧪 " + (lang === "pt" ? "Modo Teste" : lang === "es" ? "Modo Prueba" : "Test Mode")
-                  : `\u20bf ${selectedPuzzle.reward}`}
-              </span>
-              <span className="dot" />
-              <span className="address">{selectedPuzzle.address}</span>
+              {isCustomPuzzle ? (
+                <input
+                  type="text"
+                  className="custom-address-input"
+                  placeholder={lang === "pt" ? "Cole o endereço Bitcoin aqui..." : lang === "es" ? "Pega la dirección Bitcoin aquí..." : "Paste Bitcoin address here..."}
+                  value={customAddressInput}
+                  onChange={(e) => setCustomAddressInput(e.target.value)}
+                  spellCheck={false}
+                  autoComplete="off"
+                  style={{
+                    background: "rgba(0,0,0,0.4)", color: "#00ffcc", border: "1px solid #333",
+                    padding: "0.25rem 0.5rem", borderRadius: "0.25rem", width: "100%", fontFamily: "monospace", fontSize: "0.95em", textAlign: "center"
+                  }}
+                />
+              ) : (
+                <>
+                  <span className="reward">
+                    {selectedPuzzle.solved
+                      ? "🧪 " + (lang === "pt" ? "Modo Teste" : lang === "es" ? "Modo Prueba" : "Test Mode")
+                      : `\u20bf ${liveBalances[selectedPuzzle.address] || selectedPuzzle.reward}`}
+                  </span>
+                  <span className="dot" />
+                  <span className="address">{selectedPuzzle.address}</span>
+                </>
+              )}
             </div>
             <div className="target-badge-range">
               <span className="range-label">{lang === "pt" ? "intervalo:" : lang === "es" ? "rango:" : "range:"}</span>
               <span className={`range-value${customRange ? " range-custom" : ""}`}>
-                {activeRange.rangeStart} → {activeRange.rangeEnd}
+                {isCustomPuzzle && !customRange
+                  ? <span style={{ color: "#ff4444" }}>{lang === "pt" ? "[Obrigatório]" : "[Required]"}</span>
+                  : `${activeRange.rangeStart} → ${activeRange.rangeEnd}`}
               </span>
               {!editingRange && (
                 <button className="range-edit-btn" onClick={openRangeEditor} title={lang === "pt" ? "Editar intervalo" : lang === "es" ? "Editar rango" : "Edit range"}>
@@ -358,46 +446,46 @@ function App() {
                 </button>
               )}
             </div>
-
-            {editingRange && (
-              <div className="range-editor">
-                <div className="range-editor-row">
-                  <label className="range-editor-label">Start (hex)</label>
-                  <input
-                    className="range-editor-input"
-                    value={rangeInputStart}
-                    onChange={(e) => { setRangeInputStart(e.target.value); setRangeError(null); }}
-                    spellCheck={false}
-                    placeholder={selectedPuzzle.rangeStart}
-                  />
-                </div>
-                <div className="range-editor-row">
-                  <label className="range-editor-label">End (hex)</label>
-                  <input
-                    className="range-editor-input"
-                    value={rangeInputEnd}
-                    onChange={(e) => { setRangeInputEnd(e.target.value); setRangeError(null); }}
-                    spellCheck={false}
-                    placeholder={selectedPuzzle.rangeEnd}
-                  />
-                </div>
-                {rangeError && <p className="range-error">{rangeError}</p>}
-                <div className="range-editor-actions">
-                  <button className="range-apply-btn" onClick={applyCustomRange}>
-                    {lang === "pt" ? "Aplicar" : lang === "es" ? "Aplicar" : "Apply"}
-                  </button>
-                  <button className="range-cancel-btn" onClick={() => { setEditingRange(false); setRangeError(null); }}>
-                    {lang === "pt" ? "Cancelar" : lang === "es" ? "Cancelar" : "Cancel"}
-                  </button>
-                  {customRange && (
-                    <button className="range-reset-btn-sm" onClick={resetRange}>
-                      {lang === "pt" ? "Restaurar padrão" : lang === "es" ? "Restaurar" : "Reset to default"}
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
+
+          {editingRange && (
+            <div className="range-editor">
+              <div className="range-editor-row">
+                <label className="range-editor-label">Start (hex)</label>
+                <input
+                  className="range-editor-input"
+                  value={rangeInputStart}
+                  onChange={(e) => { setRangeInputStart(e.target.value); setRangeError(null); }}
+                  spellCheck={false}
+                  placeholder={selectedPuzzle.rangeStart}
+                />
+              </div>
+              <div className="range-editor-row">
+                <label className="range-editor-label">End (hex)</label>
+                <input
+                  className="range-editor-input"
+                  value={rangeInputEnd}
+                  onChange={(e) => { setRangeInputEnd(e.target.value); setRangeError(null); }}
+                  spellCheck={false}
+                  placeholder={selectedPuzzle.rangeEnd}
+                />
+              </div>
+              {rangeError && <p className="range-error">{rangeError}</p>}
+              <div className="range-editor-actions">
+                <button className="range-apply-btn" onClick={applyCustomRange}>
+                  {lang === "pt" ? "Aplicar" : lang === "es" ? "Aplicar" : "Apply"}
+                </button>
+                <button className="range-cancel-btn" onClick={() => { setEditingRange(false); setRangeError(null); }}>
+                  {lang === "pt" ? "Cancelar" : lang === "es" ? "Cancelar" : "Cancel"}
+                </button>
+                {customRange && (
+                  <button className="range-reset-btn-sm" onClick={resetRange}>
+                    {lang === "pt" ? "Restaurar padrão" : lang === "es" ? "Restaurar" : "Reset to default"}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -432,160 +520,176 @@ function App() {
               <span className="mode-desc">{lang === "pt" ? "random + sequencial" : "random + sequential"}</span>
             </button>
           </div>
-        )}
+        )
+        }
 
         {/* ── Batch size input (only sequential mode) ── */}
-        {searchMode === "inf-sequential" && state !== LotteryState.Running && state !== LotteryState.Success && (
-          <div className="batch-size-wrap">
-            <label className="batch-size-label" htmlFor="batch-size-input">
-              {lang === "pt" ? "Chaves por lote:" : lang === "es" ? "Claves por lote:" : "Keys per batch:"}
-            </label>
-            <input
-              id="batch-size-input"
-              className="batch-size-input"
-              type="number"
-              min={MIN_BATCH}
-              max={MAX_BATCH}
-              step={50000}
-              value={batchInput}
-              onChange={(e) => handleBatchInput(e.target.value)}
-              onBlur={() => {
-                const clamped = Math.max(MIN_BATCH, Math.min(MAX_BATCH, batchSize));
-                setBatchSize(clamped);
-                setBatchInput(String(clamped));
-              }}
-            />
-            <span className="batch-size-note">
-              {lang === "pt" ? `mín. ${MIN_BATCH.toLocaleString()}` : lang === "es" ? `mín. ${MIN_BATCH.toLocaleString()}` : `min ${MIN_BATCH.toLocaleString()}`}
-            </span>
-          </div>
-        )}
+        {
+          searchMode === "inf-sequential" && state !== LotteryState.Running && state !== LotteryState.Success && (
+            <div className="batch-size-wrap">
+              <label className="batch-size-label" htmlFor="batch-size-input">
+                {lang === "pt" ? "Chaves por lote:" : lang === "es" ? "Claves por lote:" : "Keys per batch:"}
+              </label>
+              <input
+                id="batch-size-input"
+                className="batch-size-input"
+                type="number"
+                min={MIN_BATCH}
+                max={MAX_BATCH}
+                step={50000}
+                value={batchInput}
+                onChange={(e) => handleBatchInput(e.target.value)}
+                onBlur={() => {
+                  const clamped = Math.max(MIN_BATCH, Math.min(MAX_BATCH, batchSize));
+                  setBatchSize(clamped);
+                  setBatchInput(String(clamped));
+                }}
+              />
+              <span className="batch-size-note">
+                {lang === "pt" ? `mín. ${MIN_BATCH.toLocaleString()}` : lang === "es" ? `mín. ${MIN_BATCH.toLocaleString()}` : `min ${MIN_BATCH.toLocaleString()}`}
+              </span>
+            </div>
+          )
+        }
 
         {/* ── Roll button ── */}
-        {state === LotteryState.Normal && (
-          <div className="action-row">
-            <button
-              id="roll-btn"
-              className={`roll-button${resultMsg !== null ? " roll-again" : ""}${isInfinite ? " infinite-roll" : ""}`}
-              onClick={handleRoll}
-            >
-              {resultMsg !== null && !isInfinite
-                ? (lang === "pt" ? "🎲 Tentar novamente" : lang === "es" ? "🎲 Intentar de nuevo" : "🎲 Try again")
-                : isInfinite
-                  ? (lang === "pt" ? "▶ Iniciar busca infinita" : lang === "es" ? "▶ Iniciar búsqueda infinita" : "▶ Start infinite search")
-                  : content["roll-btn"]}
-            </button>
-          </div>
-        )}
+        {
+          state === LotteryState.Normal && (
+            <div className="action-row">
+              <button
+                id="roll-btn"
+                className={`roll-button${resultMsg !== null ? " roll-again" : ""}${isInfinite ? " infinite-roll" : ""}`}
+                onClick={handleRoll}
+              >
+                {resultMsg !== null && !isInfinite
+                  ? (lang === "pt" ? "🎲 Tentar novamente" : lang === "es" ? "🎲 Intentar de nuevo" : "🎲 Try again")
+                  : isInfinite
+                    ? (lang === "pt" ? "▶ Iniciar busca infinita" : lang === "es" ? "▶ Iniciar búsqueda infinita" : "▶ Start infinite search")
+                    : content["roll-btn"]}
+              </button>
+            </div>
+          )
+        }
 
         {/* ── Loading (manual single roll) ── */}
-        {state === LotteryState.Loading && (
-          <div className="loading-wrap">
-            <div className="spinner" />
-            <span className="loading-text">
-              {lang === "pt" ? "Buscando chaves..." : lang === "es" ? "Buscando claves..." : "Searching keys..."}
-            </span>
-          </div>
-        )}
+        {
+          state === LotteryState.Loading && (
+            <div className="loading-wrap">
+              <div className="spinner" />
+              <span className="loading-text">
+                {lang === "pt" ? "Buscando chaves..." : lang === "es" ? "Buscando claves..." : "Searching keys..."}
+              </span>
+            </div>
+          )
+        }
 
         {/* ── Running (infinite mode) ── */}
-        {state === LotteryState.Running && (
-          <div className="infinite-running-wrap">
-            <div className="infinite-pulse-ring" />
-            <div className="infinite-running-info">
-              <span className="infinite-running-label">
-                {searchMode === "inf-random"
-                  ? (lang === "pt" ? "🎰 Busca aleatória infinita" : lang === "es" ? "🎰 Búsqueda aleatoria infinita" : "🎰 Infinite random search")
-                  : (lang === "pt" ? "🔁 Busca sequencial infinita" : lang === "es" ? "🔁 Búsqueda secuencial infinita" : "🔁 Infinite sequential search")}
-              </span>
-              <span className="infinite-running-sub">
-                {searchMode === "inf-sequential"
-                  ? (lang === "pt"
-                    ? `Gerando início aleatório + ${batchSize.toLocaleString()} sequenciais por lote...`
-                    : lang === "es"
-                      ? `Inicio aleatorio + ${batchSize.toLocaleString()} secuenciales por lote...`
-                      : `Random start + ${batchSize.toLocaleString()} sequential keys per batch...`)
-                  : (lang === "pt"
-                    ? "Testando chaves aleatórias continuamente..."
-                    : lang === "es"
-                      ? "Probando claves aleatorias continuamente..."
-                      : "Testing random keys continuously...")}
-              </span>
+        {
+          state === LotteryState.Running && (
+            <div className="infinite-running-wrap">
+              <div className="infinite-pulse-ring" />
+              <div className="infinite-running-info">
+                <span className="infinite-running-label">
+                  {searchMode === "inf-random"
+                    ? (lang === "pt" ? "🎰 Busca aleatória infinita" : lang === "es" ? "🎰 Búsqueda aleatoria infinita" : "🎰 Infinite random search")
+                    : (lang === "pt" ? "🔁 Busca sequencial infinita" : lang === "es" ? "🔁 Búsqueda secuencial infinita" : "🔁 Infinite sequential search")}
+                </span>
+                <span className="infinite-running-sub">
+                  {searchMode === "inf-sequential"
+                    ? (lang === "pt"
+                      ? `Gerando início aleatório + ${batchSize.toLocaleString()} sequenciais por lote...`
+                      : lang === "es"
+                        ? `Inicio aleatorio + ${batchSize.toLocaleString()} secuenciales por lote...`
+                        : `Random start + ${batchSize.toLocaleString()} sequential keys per batch...`)
+                    : (lang === "pt"
+                      ? "Testando chaves aleatórias continuamente..."
+                      : lang === "es"
+                        ? "Probando claves aleatorias continuamente..."
+                        : "Testing random keys continuously...")}
+                </span>
+              </div>
+              <button className="stop-button" onClick={handleStop}>
+                ⏹ {lang === "pt" ? "Parar" : lang === "es" ? "Detener" : "Stop"}
+              </button>
             </div>
-            <button className="stop-button" onClick={handleStop}>
-              ⏹ {lang === "pt" ? "Parar" : lang === "es" ? "Detener" : "Stop"}
-            </button>
-          </div>
-        )}
+          )
+        }
 
         {/* ── NOT FOUND result ── */}
-        {state === LotteryState.Normal && resultMsg !== null && (
-          <div className="result-box" style={{ marginTop: "0.5rem" }}>
-            <span className="label">
-              {lang === "pt" ? "Ponto de partida testado" : lang === "es" ? "Punto de inicio probado" : "Starting key tested"}
-            </span>
-            <span className="value">{resultMsg}</span>
-          </div>
-        )}
+        {
+          state === LotteryState.Normal && resultMsg !== null && (
+            <div className="result-box" style={{ marginTop: "0.5rem" }}>
+              <span className="label">
+                {lang === "pt" ? "Ponto de partida testado" : lang === "es" ? "Punto de inicio probado" : "Starting key tested"}
+              </span>
+              <span className="value">{resultMsg}</span>
+            </div>
+          )
+        }
 
         {/* ── SUCCESS ── */}
-        {state === LotteryState.Success && foundKey && (
-          <div className="success-banner">
-            <div className="success-header">
-              <span className="success-icon">🏆</span>
-              <h2>{content["puzzle-state-success-title"]}</h2>
-            </div>
-            <div className="result-box" style={{ marginTop: "1rem" }}>
-              <span className="label">Private Key (hex)</span>
-              <span className="value">{foundKey.hex}</span>
-            </div>
-            <div className="result-box" style={{ marginTop: "0.75rem" }}>
-              <span className="label">WIF — Import into your wallet</span>
-              <span className="value">{foundKey.wif}</span>
-            </div>
-            <div className="success-warning">
-              ⚠️{" "}
-              {lang === "pt"
-                ? "NÃO faça uma transação direta! Leia sobre Kangaroos antes de mover os BTC."
-                : lang === "es"
-                  ? "¡NO hagas una transacción directa! Lee sobre Kangaroos antes de mover los BTC."
-                  : "DO NOT make a direct transaction! Read about Kangaroos before moving the BTC."}
-              {" "}
-              <a href={lang === "pt" ? "./education-pt.html" : lang === "es" ? "./education-es.html" : "./education.html"} target="_blank" rel="noreferrer">
-                {lang === "pt" ? "Saiba mais →" : lang === "es" ? "Saber más →" : "Learn more →"}
+        {
+          state === LotteryState.Success && foundKey && (
+            <div className="success-banner">
+              <div className="success-header">
+                <span className="success-icon">🏆</span>
+                <h2>{content["puzzle-state-success-title"]}</h2>
+              </div>
+              <div className="result-box" style={{ marginTop: "1rem" }}>
+                <span className="label">Private Key (hex)</span>
+                <span className="value">{foundKey.hex}</span>
+              </div>
+              <div className="result-box" style={{ marginTop: "0.75rem" }}>
+                <span className="label">WIF — Import into your wallet</span>
+                <span className="value">{foundKey.wif}</span>
+              </div>
+              <div className="success-warning">
+                ⚠️{" "}
+                {lang === "pt"
+                  ? "NÃO faça uma transação direta! Leia sobre Kangaroos antes de mover os BTC."
+                  : lang === "es"
+                    ? "¡NO hagas una transacción directa! Lee sobre Kangaroos antes de mover los BTC."
+                    : "DO NOT make a direct transaction! Read about Kangaroos before moving the BTC."}
+                {" "}
+                <a href={lang === "pt" ? "./education-pt.html" : lang === "es" ? "./education-es.html" : "./education.html"} target="_blank" rel="noreferrer">
+                  {lang === "pt" ? "Saiba mais →" : lang === "es" ? "Saber más →" : "Learn more →"}
+                </a>
+              </div>
+              <a
+                className="tx-builder-link"
+                href={`./tx-builder.html?wif=${encodeURIComponent(foundKey.wif)}&hex=${encodeURIComponent(foundKey.hex)}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                ⚡ {lang === "pt" ? "Gerar transação para MARA Slipstream" : lang === "es" ? "Generar transacción para MARA Slipstream" : "Build Transaction for MARA Slipstream"}
               </a>
             </div>
-            <a
-              className="tx-builder-link"
-              href={`./tx-builder.html?wif=${encodeURIComponent(foundKey.wif)}&hex=${encodeURIComponent(foundKey.hex)}`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              ⚡ {lang === "pt" ? "Gerar transação para MARA Slipstream" : lang === "es" ? "Generar transacción para MARA Slipstream" : "Build Transaction for MARA Slipstream"}
-            </a>
-          </div>
-        )}
+          )
+        }
 
         {/* ── Counter ── */}
-        {attempts > 0 && state !== LotteryState.Success && (
-          <div className="attempt-counter">
-            {state === LotteryState.Running && keysPerSec > 0 ? (
-              <>
-                <span>{lang === "pt" ? "Velocidade:" : lang === "es" ? "Velocidad:" : "Speed:"}</span>
-                <strong>{keysPerSec.toLocaleString()} keys/s</strong>
-                <span className="counter-dot" />
-              </>
-            ) : null}
-            <span>{lang === "pt" ? "Chaves testadas:" : lang === "es" ? "Claves probadas:" : "Keys tested:"}</span>
-            <strong>{keysChecked.toLocaleString()}</strong>
-          </div>
-        )}
-      </div>
+        {
+          attempts > 0 && state !== LotteryState.Success && (
+            <div className="attempt-counter">
+              {state === LotteryState.Running && keysPerSec > 0 ? (
+                <>
+                  <span>{lang === "pt" ? "Velocidade:" : lang === "es" ? "Velocidad:" : "Speed:"}</span>
+                  <strong>{keysPerSec.toLocaleString()} keys/s</strong>
+                  <span className="counter-dot" />
+                </>
+              ) : null}
+              <span>{lang === "pt" ? "Chaves testadas:" : lang === "es" ? "Claves probadas:" : "Keys tested:"}</span>
+              <strong>{keysChecked.toLocaleString()}</strong>
+            </div>
+          )
+        }
+      </div >
 
       {/* ── Info footer ── */}
-      <p
+      < p
         className="puzzle-info"
-        dangerouslySetInnerHTML={{ __html: content["puzzle-info"] }}
+        dangerouslySetInnerHTML={{ __html: content["puzzle-info"] }
+        }
       />
     </>
   );
