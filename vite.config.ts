@@ -17,6 +17,7 @@ export default defineConfig({
         education: "./education.html",
         educacao: "./education-pt.html",
         educacion: "./education-es.html",
+        txbuilder: "./tx-builder.html",
       },
     },
   },

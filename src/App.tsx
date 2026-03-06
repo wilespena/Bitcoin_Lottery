@@ -79,6 +79,11 @@ function App() {
   const [keysChecked, setKeysChecked] = useState(0);
   const [keysPerSec, setKeysPerSec] = useState(0);
   const [foundKey, setFoundKey] = useState<{ hex: string; wif: string } | null>(null);
+  const [customRange, setCustomRange] = useState<{ start: string; end: string } | null>(null);
+  const [editingRange, setEditingRange] = useState(false);
+  const [rangeInputStart, setRangeInputStart] = useState("");
+  const [rangeInputEnd, setRangeInputEnd] = useState("");
+  const [rangeError, setRangeError] = useState<string | null>(null);
 
   const stopRef = useRef(false);
   const startTimeRef = useRef<number>(0);
@@ -120,9 +125,48 @@ function App() {
     keysCheckedRef.current = 0;
   };
 
+  // Active range: custom if set, else puzzle default
+  const activeRange = customRange
+    ? { rangeStart: customRange.start, rangeEnd: customRange.end }
+    : { rangeStart: selectedPuzzle.rangeStart, rangeEnd: selectedPuzzle.rangeEnd };
+
+  const openRangeEditor = () => {
+    setRangeInputStart(activeRange.rangeStart);
+    setRangeInputEnd(activeRange.rangeEnd);
+    setRangeError(null);
+    setEditingRange(true);
+  };
+
+  const applyCustomRange = () => {
+    const s = rangeInputStart.trim().toLowerCase().replace(/^0x/, "");
+    const e = rangeInputEnd.trim().toLowerCase().replace(/^0x/, "");
+    if (!s || !e || !/^[0-9a-f]+$/.test(s) || !/^[0-9a-f]+$/.test(e)) {
+      setRangeError(lang === "pt" ? "Valores hexadecimais inválidos." : lang === "es" ? "Valores hexadecimales inválidos." : "Invalid hex values.");
+      return;
+    }
+    if (BigInt("0x" + s) >= BigInt("0x" + e)) {
+      setRangeError(lang === "pt" ? "O início deve ser menor que o fim." : lang === "es" ? "El inicio debe ser menor que el fin." : "Start must be less than end.");
+      return;
+    }
+    setCustomRange({ start: s, end: e });
+    setEditingRange(false);
+    setRangeError(null);
+    resetState();
+  };
+
+  const resetRange = () => {
+    setCustomRange(null);
+    setEditingRange(false);
+    setRangeError(null);
+    resetState();
+  };
+
   const handleSelectPuzzle = (puzzle: Puzzle) => {
     stopRef.current = true;
     setSelectedPuzzle(puzzle);
+    setCustomRange(null);
+    setEditingRange(false);
+    setRangeError(null);
     resetState();
   };
 
@@ -142,10 +186,10 @@ function App() {
 
   // ── Manual: random start + 50k sequential ────────────────────
   const playNormal = async () => {
-    const start = random32ByteRange(selectedPuzzle.rangeStart, selectedPuzzle.rangeEnd);
+    const start = random32ByteRange(activeRange.rangeStart, activeRange.rangeEnd);
     setAttempts((n) => n + 1);
     setKeysChecked((n) => n + 50000);
-    const result = await findPrivateKey(start, selectedPuzzle.address);
+    const result = await findPrivateKey(start, selectedPuzzle.address, 50000, activeRange.rangeEnd);
     if (result.success && result.privateKey) {
       handleSuccess(result.privateKey);
     } else {
@@ -160,8 +204,8 @@ function App() {
 
     const result = findOneRandomBatch(
       selectedPuzzle.address,
-      selectedPuzzle.rangeStart,
-      selectedPuzzle.rangeEnd,
+      activeRange.rangeStart,
+      activeRange.rangeEnd,
       1000
     );
 
@@ -178,8 +222,8 @@ function App() {
   const runInfiniteSequential = useCallback(async () => {
     if (stopRef.current) { setState(LotteryState.Normal); return; }
 
-    const start = random32ByteRange(selectedPuzzle.rangeStart, selectedPuzzle.rangeEnd);
-    const result = await findPrivateKey(start, selectedPuzzle.address, batchSize);
+    const start = random32ByteRange(activeRange.rangeStart, activeRange.rangeEnd);
+    const result = await findPrivateKey(start, selectedPuzzle.address, batchSize, activeRange.rangeEnd);
 
     keysCheckedRef.current += batchSize;
     setAttempts((n) => n + 1);
@@ -293,17 +337,66 @@ function App() {
               <span className="reward">
                 {selectedPuzzle.solved
                   ? "🧪 " + (lang === "pt" ? "Modo Teste" : lang === "es" ? "Modo Prueba" : "Test Mode")
-                  : `₿ ${selectedPuzzle.reward}`}
+                  : `\u20bf ${selectedPuzzle.reward}`}
               </span>
               <span className="dot" />
               <span className="address">{selectedPuzzle.address}</span>
             </div>
             <div className="target-badge-range">
               <span className="range-label">{lang === "pt" ? "intervalo:" : lang === "es" ? "rango:" : "range:"}</span>
-              <span className="range-value">
-                {selectedPuzzle.rangeStart} → {selectedPuzzle.rangeEnd}
+              <span className={`range-value${customRange ? " range-custom" : ""}`}>
+                {activeRange.rangeStart} → {activeRange.rangeEnd}
               </span>
+              {!editingRange && (
+                <button className="range-edit-btn" onClick={openRangeEditor} title={lang === "pt" ? "Editar intervalo" : lang === "es" ? "Editar rango" : "Edit range"}>
+                  ⚙️
+                </button>
+              )}
+              {customRange && !editingRange && (
+                <button className="range-reset-btn" onClick={resetRange} title={lang === "pt" ? "Restaurar padrão" : lang === "es" ? "Restaurar por defecto" : "Reset to default"}>
+                  ↺
+                </button>
+              )}
             </div>
+
+            {editingRange && (
+              <div className="range-editor">
+                <div className="range-editor-row">
+                  <label className="range-editor-label">Start (hex)</label>
+                  <input
+                    className="range-editor-input"
+                    value={rangeInputStart}
+                    onChange={(e) => { setRangeInputStart(e.target.value); setRangeError(null); }}
+                    spellCheck={false}
+                    placeholder={selectedPuzzle.rangeStart}
+                  />
+                </div>
+                <div className="range-editor-row">
+                  <label className="range-editor-label">End (hex)</label>
+                  <input
+                    className="range-editor-input"
+                    value={rangeInputEnd}
+                    onChange={(e) => { setRangeInputEnd(e.target.value); setRangeError(null); }}
+                    spellCheck={false}
+                    placeholder={selectedPuzzle.rangeEnd}
+                  />
+                </div>
+                {rangeError && <p className="range-error">{rangeError}</p>}
+                <div className="range-editor-actions">
+                  <button className="range-apply-btn" onClick={applyCustomRange}>
+                    {lang === "pt" ? "Aplicar" : lang === "es" ? "Aplicar" : "Apply"}
+                  </button>
+                  <button className="range-cancel-btn" onClick={() => { setEditingRange(false); setRangeError(null); }}>
+                    {lang === "pt" ? "Cancelar" : lang === "es" ? "Cancelar" : "Cancel"}
+                  </button>
+                  {customRange && (
+                    <button className="range-reset-btn-sm" onClick={resetRange}>
+                      {lang === "pt" ? "Restaurar padrão" : lang === "es" ? "Restaurar" : "Reset to default"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -458,10 +551,18 @@ function App() {
                   ? "¡NO hagas una transacción directa! Lee sobre Kangaroos antes de mover los BTC."
                   : "DO NOT make a direct transaction! Read about Kangaroos before moving the BTC."}
               {" "}
-              <a href="./education.html" target="_blank" rel="noreferrer">
+              <a href={lang === "pt" ? "./education-pt.html" : lang === "es" ? "./education-es.html" : "./education.html"} target="_blank" rel="noreferrer">
                 {lang === "pt" ? "Saiba mais →" : lang === "es" ? "Saber más →" : "Learn more →"}
               </a>
             </div>
+            <a
+              className="tx-builder-link"
+              href={`./tx-builder.html?wif=${encodeURIComponent(foundKey.wif)}&hex=${encodeURIComponent(foundKey.hex)}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              ⚡ {lang === "pt" ? "Gerar transação para MARA Slipstream" : lang === "es" ? "Generar transacción para MARA Slipstream" : "Build Transaction for MARA Slipstream"}
+            </a>
           </div>
         )}
 

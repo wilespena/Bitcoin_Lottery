@@ -316,50 +316,68 @@
     <div class="step">
       <div class="step-num">2</div>
       <div class="step-body">
-        <strong>Build your transaction offline.</strong><br>
-        Use an air-gapped computer or an offline signing tool to create and sign a transaction
-        sending the BTC to a new, fresh wallet address you control. Do not connect to the internet during this step.
+        <strong>Use the built-in Transaction Builder.</strong><br>
+        When you find the key, a green button <em>"⚡ Build Transaction for MARA Slipstream"</em> appears automatically
+        on the lottery screen. Click it to open the Transaction Builder — it will pre-fill your private key.
+        The tool fetches your UTXO data directly from <a href="https://mempool.space" target="_blank"
+          rel="noreferrer">mempool.space</a>
+        and signs the transaction <strong>100% in your browser</strong> — no server, no key ever leaves your device.
+        You do NOT need Electrum or any other wallet.
       </div>
     </div>
 
     <div class="step">
       <div class="step-num">3</div>
       <div class="step-body">
-        <strong>Submit ONLY to MARA Slipstream.</strong><br>
-        Copy your signed raw transaction (hex) and go to
-        <a href="https://slipstream.mara.com/" target="_blank" rel="noreferrer">slipstream.mara.com</a>.
-        Submit the transaction there. It will be added privately to MARA's next block without touching the public
-        mempool.
+        <strong>Set a competitive fee rate.</strong><br>
+        The builder automatically fetches current fee rates from mempool.space and calculates the
+        <strong>MARA Slipstream minimum</strong> for you: <code>max(2 × priority fee, 2 sat/vByte)</code>.
+        Three presets are shown — Normal ⛏ (MARA min), Priority ⚡ (2×) and Fast 🚀 (3×).
+        Choose at least the MARA minimum so your transaction gets included.
       </div>
     </div>
 
     <div class="step">
       <div class="step-num">4</div>
       <div class="step-body">
-        <strong>Wait for confirmation.</strong><br>
-        Once MARA mines a block containing your transaction, it will appear on the blockchain confirmed.
-        Only at this point is your public key revealed — but the transaction is already final.
+        <strong>Submit ONLY to MARA Slipstream.</strong><br>
+        Copy your signed raw transaction (hex) and go to
+        <a href="https://slipstream.mara.com/" target="_blank" rel="noreferrer">slipstream.mara.com</a>.
+        Submit the transaction there. It will be added privately to MARA's next block without touching the public
+        mempool. The button <em>"⛏ Open MARA Slipstream →"</em> on the builder takes you there directly.
       </div>
     </div>
 
     <div class="step">
       <div class="step-num">5</div>
       <div class="step-body">
-        <strong>Move your funds again.</strong><br>
+        <strong>Wait for confirmation.</strong><br>
+        Once MARA mines a block containing your transaction, it will appear on the blockchain confirmed.
+        Only at this point is your public key revealed — but the transaction is already final and irreversible.
+        Bots have no time to react.
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <strong>Move your funds to cold storage.</strong><br>
         After the first confirmation, send the BTC from the new address to your final secure cold wallet.
         From here, normal transactions are safe.
       </div>
     </div>
 
     <div class="card gold">
-      <span class="badge gold">💡 Tip</span>
+      <span class="badge gold">💡 How the fee is auto-calculated</span>
       <p style="margin:0">
-        MARA Slipstream is free to use. You just need to set a competitive fee rate so MARA is incentivized
-        to include your transaction. Check current fee rates at
-        <a href="https://mempool.space" target="_blank" rel="noreferrer">mempool.space</a> before building your
-        transaction.
+        The Transaction Builder calls <code>mempool.space/api/v1/fees/recommended</code> on load.
+        MARA's documented minimum is <strong>the higher of 2× current priority fee rate or 2 sat/vByte</strong>.
+        The builder applies this formula automatically and pre-selects the MARA minimum preset.
+        You can raise it (Priority or Fast presets) to increase the chance MARA includes your tx quickly —
+        but never go below the minimum or the transaction will be rejected.
       </p>
     </div>
+
 
     <hr>
 

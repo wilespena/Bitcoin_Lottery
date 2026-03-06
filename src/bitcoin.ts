@@ -52,9 +52,11 @@ export const random32ByteRange = (min: string, max: string) => {
   return result.toString(16);
 };
 
-export const findPrivateKey = async (start: string, goalAddress: string, batchSize = 50000) => {
+export const findPrivateKey = async (start: string, goalAddress: string, batchSize = 50000, maxKey?: string) => {
   let privateKey = BigInt("0x" + start);
+  const limit = maxKey ? BigInt("0x" + maxKey) : null;
   for (let i = 0; i < batchSize; i++) {
+    if (limit !== null && privateKey > limit) break;
     const resultAddres = generate_address_from_priv(privateKey.toString(16));
     if (resultAddres === goalAddress)
       return {
@@ -102,3 +104,76 @@ export const findOneRandomBatch = (
   return { success: false };
 };
 
+/** Derives the P2PKH address from a WIF or HEX private key. */
+export const deriveFromKey = (key: string): { address: string; pubkeyHex: string } => {
+  let keyPair;
+  if (/^[5KL]/.test(key)) {
+    keyPair = ECPair.fromWIF(key, bitcoin.networks.bitcoin);
+  } else {
+    keyPair = ECPair.fromPrivateKey(Buffer.from(key.padStart(64, "0"), "hex"), { compressed: true });
+  }
+  const { address } = bitcoin.payments.p2pkh({
+    pubkey: Buffer.from(keyPair.publicKey),
+    network: bitcoin.networks.bitcoin,
+  });
+  return { address: address!, pubkeyHex: Buffer.from(keyPair.publicKey).toString("hex") };
+};
+
+export interface TxParams {
+  txid: string;
+  vout: number;
+  amountSatoshis: number;
+  destAddress: string;
+  feeSatoshis: number;
+  privateKey: string;
+}
+
+/**
+ * Builds and signs a raw P2PKH Bitcoin transaction.
+ * Does NOT require the full previous transaction hex —
+ * uses bitcoinjs-lib's Transaction class for manual scriptSig construction.
+ */
+export const buildRawTransaction = (params: TxParams): string => {
+  const { txid, vout, amountSatoshis, destAddress, feeSatoshis, privateKey } = params;
+  const network = bitcoin.networks.bitcoin;
+
+  let keyPair;
+  if (/^[5KL]/.test(privateKey)) {
+    keyPair = ECPair.fromWIF(privateKey, network);
+  } else {
+    keyPair = ECPair.fromPrivateKey(Buffer.from(privateKey.padStart(64, "0"), "hex"), { compressed: true });
+  }
+
+  const outputValue = amountSatoshis - feeSatoshis;
+  if (outputValue <= 0) throw new Error("Fee exceeds or equals amount");
+  if (outputValue < 546) throw new Error("Output would be dust (below 546 satoshis)");
+
+  const tx = new bitcoin.Transaction();
+  tx.version = 2;
+
+  // txid must be reversed (Bitcoin wire format is little-endian)
+  const txidBytes = Buffer.from(txid, "hex").reverse();
+  tx.addInput(txidBytes, vout, 0xfffffffe);
+
+  const outputScript = bitcoin.address.toOutputScript(destAddress, network);
+  tx.addOutput(outputScript, outputValue);
+
+  // P2PKH scriptPubKey of the INPUT address (needed to generate the sighash)
+  const p2pkh = bitcoin.payments.p2pkh({
+    pubkey: Buffer.from(keyPair.publicKey),
+    network,
+  });
+
+  const sigHash = tx.hashForSignature(0, p2pkh.output!, bitcoin.Transaction.SIGHASH_ALL);
+  const rawSig = keyPair.sign(sigHash);
+  const derSig = bitcoin.script.signature.encode(Buffer.from(rawSig), bitcoin.Transaction.SIGHASH_ALL);
+
+  const scriptSig = bitcoin.payments.p2pkh({
+    pubkey: Buffer.from(keyPair.publicKey),
+    signature: derSig,
+    network,
+  }).input!;
+
+  tx.setInputScript(0, scriptSig);
+  return tx.toHex();
+};

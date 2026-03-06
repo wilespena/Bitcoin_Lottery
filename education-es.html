@@ -319,47 +319,74 @@
         <div class="step">
             <div class="step-num">2</div>
             <div class="step-body">
-                <strong>Construye tu transacción sin conexión.</strong><br>
-                Usa una computadora sin internet o una herramienta de firma offline para crear y firmar una transacción
-                enviando los BTC a una nueva dirección que controles. No te conectes a internet durante este paso.
+                <strong>Usa el Constructor de Transacciones integrado.</strong><br>
+                Cuando encuentres la clave, aparecerá automáticamente un botón verde <em>"⚡ Build Transaction for MARA
+                    Slipstream"</em>
+                en la pantalla de éxito. Haz clic en él para abrir el Constructor de Transacciones — ya vendrá con tu
+                clave privada.
+                La herramienta busca tus fondos (UTXOs) automáticamente en <a href="https://mempool.space"
+                    target="_blank" rel="noreferrer">mempool.space</a>
+                y firma la transacción <strong>100% en tu navegador</strong> — sin servidor, ninguna clave sale de tu
+                dispositivo.
+                NO necesitas Electrum ni ninguna otra billetera.
             </div>
         </div>
+
         <div class="step">
             <div class="step-num">3</div>
             <div class="step-body">
-                <strong>Envía SOLO a MARA Slipstream.</strong><br>
-                Copia tu transacción hex firmada y accede a
-                <a href="https://slipstream.mara.com/" target="_blank" rel="noreferrer">slipstream.mara.com</a>.
-                Envía la transacción allí. Será añadida de forma privada al siguiente bloque de MARA, sin tocar el
-                mempool público.
+                <strong>Define una tarifa minera (fee) competitiva.</strong><br>
+                El constructor busca automáticamente las tarifas actuales de mempool.space y calcula el
+                <strong>mínimo MARA Slipstream</strong> para ti: <code>máximo(2 × tarifa prioridad, 2 sat/vByte)</code>.
+                Se muestran tres opciones (presets) — Normal ⛏ (mínimo MARA), Priority ⚡ (2×) y Fast 🚀 (3×).
+                Elige al menos el mínimo de MARA para garantizar que se incluya tu transacción.
             </div>
         </div>
+
         <div class="step">
             <div class="step-num">4</div>
             <div class="step-body">
-                <strong>Espera la confirmación.</strong><br>
-                Cuando MARA mine un bloque con tu transacción, aparecerá en la blockchain confirmada.
-                Solo en ese momento tu clave pública se revela — pero la transacción ya es final e inmutable.
+                <strong>Envía SOLO a MARA Slipstream.</strong><br>
+                Copia tu transacción firmada en hex y entra a
+                <a href="https://slipstream.mara.com/" target="_blank" rel="noreferrer">slipstream.mara.com</a>.
+                Envía la transacción allí. Será añadida de forma privada al siguiente bloque de MARA, sin pasar nunca
+                por el
+                mempool público. El botón <em>"⛏ Open MARA Slipstream →"</em> en el constructor te lleva directamente a
+                la página.
             </div>
         </div>
+
         <div class="step">
             <div class="step-num">5</div>
             <div class="step-body">
-                <strong>Mueve tus fondos nuevamente.</strong><br>
+                <strong>Espera la confirmación.</strong><br>
+                Cuando MARA mine un bloque con tu transacción, aparecerá en la blockchain ya confirmada.
+                Solo en ese momento tu clave pública se revela públicamente — pero la transacción ya es final e
+                inmutable.
+                Los bots no tendrán tiempo de reaccionar.
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-num">6</div>
+            <div class="step-body">
+                <strong>Mueve tus fondos a una billetera fría.</strong><br>
                 Después de la primera confirmación, envía los BTC desde la nueva dirección a tu billetera fría
-                definitiva.
-                Desde aquí, las transacciones normales son seguras.
+                definitiva y segura.
+                A partir de aquí, cualquier transacción normal es 100% segura.
             </div>
         </div>
 
         <div class="card gold">
-            <span class="badge gold">💡 Consejo</span>
+            <span class="badge gold">💡 Cómo se autocalcula la tarifa</span>
             <p style="margin:0">
-                MARA Slipstream es gratuito. Solo necesitas definir una tarifa competitiva para que MARA tenga incentivo
-                de incluir tu transacción.
-                Verifica las tarifas actuales en
-                <a href="https://mempool.space" target="_blank" rel="noreferrer">mempool.space</a> antes de construir tu
-                transacción.
+                El Constructor de Transacciones obtiene <code>mempool.space/api/v1/fees/recommended</code> al cargar.
+                El mínimo documentado por MARA es <strong>el mayor entre 2× la tarifa prioritaria actual y 2
+                    sat/vByte</strong>.
+                El constructor aplica esta fórmula automáticamente y preselecciona la opción Normal con el mínimo de
+                MARA.
+                Puedes aumentarla (presets Priority o Fast) para elevar la probabilidad de que MARA la incluya rápido —
+                pero nunca la bajes del mínimo, o tu transacción será rechazada.
             </p>
         </div>
 
