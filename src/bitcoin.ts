@@ -123,9 +123,11 @@ export interface TxParams {
   txid: string;
   vout: number;
   amountSatoshis: number;
+  spendSatoshis: number;
   destAddress: string;
   feeSatoshis: number;
   privateKey: string;
+  changeAddress: string;
 }
 
 /**
@@ -134,7 +136,7 @@ export interface TxParams {
  * uses bitcoinjs-lib's Transaction class for manual scriptSig construction.
  */
 export const buildRawTransaction = (params: TxParams): string => {
-  const { txid, vout, amountSatoshis, destAddress, feeSatoshis, privateKey } = params;
+  const { txid, vout, amountSatoshis, spendSatoshis, destAddress, feeSatoshis, privateKey, changeAddress } = params;
   const network = bitcoin.networks.bitcoin;
 
   let keyPair;
@@ -144,9 +146,9 @@ export const buildRawTransaction = (params: TxParams): string => {
     keyPair = ECPair.fromPrivateKey(Buffer.from(privateKey.padStart(64, "0"), "hex"), { compressed: true });
   }
 
-  const outputValue = amountSatoshis - feeSatoshis;
-  if (outputValue <= 0) throw new Error("Fee exceeds or equals amount");
-  if (outputValue < 546) throw new Error("Output would be dust (below 546 satoshis)");
+  const changeValue = amountSatoshis - spendSatoshis - feeSatoshis;
+  if (changeValue < 0) throw new Error("Insufficient UTXO amount for spend + fee");
+  if (spendSatoshis < 546) throw new Error("Destination amount is dust (below 546 satoshis)");
 
   const tx = new bitcoin.Transaction();
   tx.version = 2;
@@ -155,8 +157,15 @@ export const buildRawTransaction = (params: TxParams): string => {
   const txidBytes = Buffer.from(txid, "hex").reverse();
   tx.addInput(txidBytes, vout, 0xfffffffe);
 
-  const outputScript = bitcoin.address.toOutputScript(destAddress, network);
-  tx.addOutput(outputScript, outputValue);
+  // Output 1: Destinatário
+  const destScript = bitcoin.address.toOutputScript(destAddress, network);
+  tx.addOutput(destScript, spendSatoshis);
+
+  // Output 2: Troco (se houver mais que o limite de poeira)
+  if (changeValue >= 546 && changeAddress) {
+    const changeScript = bitcoin.address.toOutputScript(changeAddress, network);
+    tx.addOutput(changeScript, changeValue);
+  }
 
   // P2PKH scriptPubKey of the INPUT address (needed to generate the sighash)
   const p2pkh = bitcoin.payments.p2pkh({

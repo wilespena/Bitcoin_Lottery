@@ -9,10 +9,6 @@ function btcToSats(btc: string): number {
     return Math.round(parseFloat(btc) * BTC_TO_SAT);
 }
 
-function satsToDisplay(sats: number): string {
-    return (sats / BTC_TO_SAT).toFixed(8) + " BTC";
-}
-
 function isValidTxid(s: string) {
     return /^[0-9a-fA-F]{64}$/.test(s.trim());
 }
@@ -37,6 +33,7 @@ export default function TxBuilder() {
     const [txid, setTxid] = useState("");
     const [vout, setVout] = useState("0");
     const [amountBtc, setAmountBtc] = useState("");
+    const [spendBtc, setSpendBtc] = useState("");
     const [destAddress, setDestAddress] = useState("");
     const [feeRate, setFeeRate] = useState("2"); // default MARA min
 
@@ -128,12 +125,17 @@ export default function TxBuilder() {
     const selectUtxo = (u: MempoolUTXO) => {
         setTxid(u.txid);
         setVout(String(u.vout));
-        setAmountBtc((u.value / BTC_TO_SAT).toFixed(8));
+        const totalInput = (u.value / BTC_TO_SAT).toFixed(8);
+        setAmountBtc(totalInput);
+        setSpendBtc(totalInput); // por default, tenta gastar tudo
     };
 
     const amountSats = amountBtc ? btcToSats(amountBtc) : 0;
+    const spendSats = spendBtc ? btcToSats(spendBtc) : 0;
     const feeSats = Math.round(parseFloat(feeRate || "0") * ESTIMATED_TX_BYTES);
-    const outputSats = amountSats - feeSats;
+
+    // Troco = Input Total - Valor a Enviar - Taxa
+    const changeSats = amountSats - spendSats - feeSats;
 
     const handleGenerate = async () => {
         setRawHex(null);
@@ -147,19 +149,22 @@ export default function TxBuilder() {
         if (deriveError) return setBuildError(deriveError);
         if (!isValidTxid(txid)) return setBuildError("TXID must be 64 hex characters.");
         if (isNaN(parseInt(vout)) || parseInt(vout) < 0) return setBuildError("Invalid output index.");
-        if (!amountBtc || amountSats <= 0) return setBuildError("Enter the UTXO amount in BTC.");
+        if (!spendBtc || spendSats <= 0) return setBuildError("Enter the amount to send in BTC.");
         if (!destAddress.trim()) return setBuildError("Enter a destination address.");
         if (feeSats <= 0) return setBuildError("Fee rate must be > 0.");
-        if (outputSats < 546) return setBuildError(`Output too low — increase amount or lower fee. Output: ${outputSats} sats.`);
+        if (spendSats < 546) return setBuildError(`Send amount too low. Minimum is 546 sats.`);
+        if (changeSats < 0) return setBuildError(`Insufficient funds! Need ${Math.abs(changeSats)} more sats to cover amount + fee.`);
 
         try {
             const hex = buildRawTransaction({
                 txid: txid.trim(),
                 vout: parseInt(vout),
-                amountSatoshis: amountSats,
-                destAddress: destAddress.trim(),
+                amountSatoshis: amountSats,       // total UTXO
+                spendSatoshis: spendSats,         // valor a enviar
+                destAddress: destAddress.trim(),  // alvo
                 feeSatoshis: feeSats,
                 privateKey: privateKey.trim(),
+                changeAddress: derivedAddress || "", // fallback de troco pra chave geradora
             });
             setRawHex(hex);
         } catch (err: any) {
@@ -349,29 +354,32 @@ export default function TxBuilder() {
                             />
                             <div className="tx-row-2col">
                                 <div>
-                                    <label className="tx-label">Output Index (Vout)</label>
-                                    <input
-                                        className="tx-input tx-mono"
-                                        type="number"
-                                        min="0"
-                                        placeholder="0"
-                                        value={vout}
-                                        onChange={(e) => setVout(e.target.value)}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="tx-label">Amount (BTC)</label>
+                                    <label className="tx-label">UTXO Total (BTC)</label>
                                     <input
                                         className="tx-input tx-mono"
                                         type="number"
                                         min="0"
                                         step="0.00000001"
-                                        placeholder="7.10000000"
+                                        placeholder="UTXO total"
                                         value={amountBtc}
                                         onChange={(e) => setAmountBtc(e.target.value)}
+                                        title="The total value of the unspent output you are claiming"
                                     />
-                                    {amountSats > 0 && (
-                                        <span className="tx-note">{amountSats.toLocaleString()} satoshis</span>
+                                </div>
+                                <div>
+                                    <label className="tx-label">Send Amount (BTC)</label>
+                                    <input
+                                        className="tx-input tx-mono highlight-input"
+                                        type="number"
+                                        min="0"
+                                        step="0.00000001"
+                                        placeholder="Amount to send"
+                                        value={spendBtc}
+                                        onChange={(e) => setSpendBtc(e.target.value)}
+                                        title="The exact amount you want the destination address to receive"
+                                    />
+                                    {spendSats > 0 && (
+                                        <span className="tx-note">{spendSats.toLocaleString()} satoshis to send</span>
                                     )}
                                 </div>
                             </div>
@@ -456,15 +464,33 @@ export default function TxBuilder() {
                         </div>
                         <div className="tx-fee-summary">
                             <div className="tx-fee-row">
-                                <span>Estimated fee</span>
-                                <strong>{feeSats.toLocaleString()} sats ({satsToDisplay(feeSats)})</strong>
+                                <span>Total UTXO Input</span>
+                                <strong>{amountSats.toLocaleString()} sats</strong>
                             </div>
                             <div className="tx-fee-row">
-                                <span>You will receive</span>
-                                <strong className={outputSats < 546 ? "tx-bad" : "tx-good"}>
-                                    {outputSats > 0 ? `${outputSats.toLocaleString()} sats (${satsToDisplay(outputSats)})` : "—"}
+                                <span>Estimated Miner Fee</span>
+                                <strong className="tx-minus">- {feeSats.toLocaleString()} sats</strong>
+                            </div>
+                            <div className="tx-fee-row">
+                                <span>Sent to Destination</span>
+                                <strong className="tx-minus">- {spendSats > 0 ? `${spendSats.toLocaleString()} sats` : "0 sats"}</strong>
+                            </div>
+                            <div className="tx-fee-row" style={{ marginTop: '4px', paddingTop: '4px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                                <span>Change (Back to you)</span>
+                                <strong className={changeSats >= 0 ? "tx-plus" : "tx-error"}>
+                                    {changeSats.toLocaleString()} sats
                                 </strong>
                             </div>
+                            {changeSats < 0 && (
+                                <p className="tx-error" style={{ fontSize: '11px', textAlign: 'right', marginTop: '2px' }}>
+                                    Negative change. Reduce amount or fee.
+                                </p>
+                            )}
+                            {changeSats > 0 && changeSats < 546 && (
+                                <p className="tx-bad" style={{ fontSize: '11px', textAlign: 'right', marginTop: '2px' }}>
+                                    ⚠️ Change &lt; 546 sats (Dust) will become miner fee.
+                                </p>
+                            )}
                         </div>
                     </div>
                 </div>
