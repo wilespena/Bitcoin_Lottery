@@ -315,6 +315,10 @@ function App() {
       1000
     );
 
+    if (result.triedKey) {
+      setRecentKeys((prev) => [result.triedKey!, ...prev].slice(0, 5));
+    }
+
     keysCheckedRef.current += 1000;
     setAttempts((n) => n + 1);
     setKeysChecked(keysCheckedRef.current);
@@ -341,7 +345,7 @@ function App() {
 
     // Use setTimeout to yield to browser between batches
     setTimeout(() => { runInfiniteSequential(); }, 0);
-  }, [selectedPuzzle, batchSize]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeAddress, activeRange, batchSize]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const startInfiniteLoop = () => {
     stopRef.current = false;
@@ -721,11 +725,13 @@ function App() {
                 </span>
               </div>
 
-              {/* ── Recent Keys for Sequential Mode ── */}
-              {searchMode === "inf-sequential" && recentKeys.length > 0 && (
+              {/* ── Recent Keys for Infinite Modes ── */}
+              {(searchMode === "inf-sequential" || searchMode === "inf-random") && recentKeys.length > 0 && (
                 <div className="recent-keys-wrap">
                   <p className="recent-keys-title">
-                    {lang === "pt" ? "Últimas chaves de início (Start) geradas:" : lang === "es" ? "Últimas claves de inicio (Start) generadas:" : "Latest starting keys generated:"}
+                    {searchMode === "inf-sequential"
+                      ? (lang === "pt" ? "Últimas chaves de início (Start) geradas:" : lang === "es" ? "Últimas claves de inicio (Start) generadas:" : "Latest starting keys generated:")
+                      : (lang === "pt" ? "Últimas chaves aleatórias testadas:" : lang === "es" ? "Últimas claves aleatorias probadas:" : "Latest random keys tested:")}
                   </p>
                   <div className="recent-keys-list">
                     {recentKeys.map((k, i) => (

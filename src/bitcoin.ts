@@ -94,14 +94,16 @@ export const findOneRandomBatch = (
   rangeEnd: string,
   batchSize = 1000
 ): { success: boolean; privateKey?: bigint; triedKey?: string } => {
+  let lastKeyHex = "";
   for (let i = 0; i < batchSize; i++) {
     const keyHex = random32ByteRange(rangeStart, rangeEnd);
+    lastKeyHex = keyHex;
     const address = generate_address_from_priv(keyHex);
     if (address === goalAddress) {
       return { success: true, privateKey: BigInt("0x" + keyHex), triedKey: keyHex };
     }
   }
-  return { success: false };
+  return { success: false, triedKey: lastKeyHex };
 };
 
 /** Derives the P2PKH address from a WIF or HEX private key. */
