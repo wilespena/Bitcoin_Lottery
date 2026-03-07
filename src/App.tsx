@@ -275,7 +275,7 @@ function App() {
 
     if (result.success && result.privateKey) { handleSuccess(result.privateKey); return; }
     setTimeout(runInfiniteRandom, 0);
-  }, [activeAddress, activeRange]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeAddress, activeRange]);  
 
   // ── Infinite sequential: random start + N sequential per batch ─
   const runInfiniteSequential = useCallback(async () => {

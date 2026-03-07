@@ -69,7 +69,7 @@ export default function TxBuilder() {
             })
             .catch(() => { /* keep default 2 */ })
             .finally(() => setFetchingFees(false));
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+
     }, []);
 
     // Auto-derive address when private key changes
@@ -193,7 +193,7 @@ export default function TxBuilder() {
                     </div>
                     <p className="tx-card-hint">Paste the WIF or HEX private key you found in the lottery.</p>
                     <input
-                        className="tx-input tx-mono"
+                        className={`tx-input tx-mono ${buildError?.includes("private key") ? "tx-input-error" : ""}`}
                         placeholder="WIF (5... / K... / L...) or HEX (64 chars)"
                         value={privateKey}
                         onChange={(e) => setPrivateKey(e.target.value)}
@@ -278,7 +278,7 @@ export default function TxBuilder() {
                         <>
                             <label className="tx-label">Transaction ID (TxID)</label>
                             <input
-                                className="tx-input tx-mono"
+                                className={`tx-input tx-mono ${buildError?.includes("TXID") ? "tx-input-error" : ""}`}
                                 placeholder="64-character hex txid"
                                 value={txid}
                                 onChange={(e) => setTxid(e.target.value)}
@@ -301,7 +301,7 @@ export default function TxBuilder() {
                                 <div>
                                     <label className="tx-label">Send Amount (BTC)</label>
                                     <input
-                                        className="tx-input tx-mono highlight-input"
+                                        className={`tx-input tx-mono highlight-input ${buildError?.includes("amount to send") || buildError?.includes("amount too low") || buildError?.includes("Insufficient") ? "tx-input-error" : ""}`}
                                         type="number"
                                         min="0"
                                         step="0.00000001"
@@ -331,7 +331,7 @@ export default function TxBuilder() {
                     </p>
                     <label className="tx-label">Send to</label>
                     <input
-                        className="tx-input tx-mono"
+                        className={`tx-input tx-mono ${buildError?.includes("destination address") ? "tx-input-error" : ""}`}
                         placeholder="bc1q... or 1... or 3..."
                         value={destAddress}
                         onChange={(e) => setDestAddress(e.target.value)}
@@ -440,6 +440,15 @@ export default function TxBuilder() {
                                 rows={3}
                                 onClick={(e) => (e.target as HTMLTextAreaElement).select()}
                             />
+
+                            <div className="tx-instructions">
+                                <h4 className="tx-instructions-title">Next Steps:</h4>
+                                <ol className="tx-instructions-list">
+                                    <li>Click <strong>Copy</strong> to save your Raw Transaction HEX.</li>
+                                    <li>Click the button below to open <strong>MARA Slipstream</strong>.</li>
+                                    <li>Paste your hex into their form and click <strong>Submit</strong>!</li>
+                                </ol>
+                            </div>
 
                             {/* Manual Submission Fallback */}
                             <div className="tx-mara-auto-panel">

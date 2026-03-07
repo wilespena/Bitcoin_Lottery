@@ -346,31 +346,23 @@
         <div class="step">
             <div class="step-num">4</div>
             <div class="step-body">
-                <strong>Envía directamente a MARA Slipstream.</strong><br>
-                Haz clic en el botón verde <em>"🚀 Submit to MARA Slipstream API"</em> en el constructor.
-                Esto envía tu transacción de forma directa y segura al mempool privado de MARA a través de su API
-                oficial.
-                Como alternativa, puedes copiar el hex en bruto y enviarlo manualmente en su sitio web.
+                <strong>Copia el Payload y envíalo en MARA Slipstream.</strong><br>
+                El TxBuilder NO enviará la transacción automáticamente para evitar bloqueos por CORS nativos del
+                navegador. En su lugar,
+                generará el código HEX limpio firmado. Haz clic en el botón <em>"Copy"</em> o usa el enlace para abrir
+                el portal oficial <a href="https://slipstream.mara.com/" target="_blank" rel="noreferrer">Slipstream
+                    MARA</a>
+                en una nueva pestaña. Pega el código allí y haz clic en Submit.
             </div>
         </div>
 
         <div class="step">
             <div class="step-num">5</div>
             <div class="step-body">
-                <strong>Sigue el estado y espera.</strong><br>
-                Después de enviar, el constructor se convierte en un Panel de Seguimiento (Tracker) que verifica tu
-                estado cada 30 segundos.
-                Te informará cuando MARA programe tu transacción para su próximo bloque.
-                Una vez que la minen, tu transacción estará confirmada en la blockchain de forma rápida y segura.
-            </div>
-        </div>
-
-        <div class="step">
-            <div class="step-num">6</div>
-            <div class="step-body">
-                <strong>Mueve tus fondos a una billetera fría.</strong><br>
-                Después de la primera confirmación, envía los BTC desde la nueva dirección a tu billetera fría
-                definitiva y segura.
+                <strong>Mueva sus fondos a una billetera fría.</strong><br>
+                MARA te avisará el estado del bloque directamente en la web de Slipstream. Luego de la primera
+                confirmación en la blockchain,
+                envíe urgentemente los BTC desde la cuenta intermedia a su billetera fría definitiva (Hardware wallet).
                 A partir de aquí, cualquier transacción normal es 100% segura.
             </div>
         </div>
@@ -381,10 +373,9 @@
                 El Constructor de Transacciones obtiene <code>mempool.space/api/v1/fees/recommended</code> al cargar.
                 El mínimo documentado por MARA es <strong>el mayor entre 2× la tarifa prioritaria actual y 2
                     sat/vByte</strong>.
-                El constructor aplica esta fórmula automáticamente y preselecciona la opción Normal con el mínimo de
-                MARA.
-                Puedes aumentarla (presets Priority o Fast) para elevar la probabilidad de que MARA la incluya rápido —
-                pero nunca la bajes del mínimo, o tu transacción será rechazada.
+                El constructor usa esta fórmula para bloquear la tarifa exacta en sats y construye la Raw Transaction
+                con la precisión exigida por pools institucionales. (Nunca baje esta tarifa en el input, solo súbala si
+                desea competir en momentos pico de congestión).
             </p>
         </div>
 
