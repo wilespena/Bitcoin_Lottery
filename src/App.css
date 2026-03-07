@@ -79,16 +79,25 @@
 
 @media screen and (max-width: 420px) {
   .puzzle-btn {
-    padding: 6px 10px;
-    border-radius: 10px;
+    padding: 6px 6px;
+    border-radius: 8px;
   }
 
   .puzzle-btn-number {
     font-size: 13px;
   }
 
+  .custom-btn .puzzle-btn-number {
+    font-size: 11.5px;
+  }
+
+  .custom-btn {
+    min-width: 85px;
+    flex: 1 1 auto;
+  }
+
   .puzzle-selector {
-    gap: 6px;
+    gap: 5px;
   }
 }
 
@@ -1008,9 +1017,48 @@
 }
 
 .tx-card-hint a {
-  color: var(--gold);
-  font-weight: 600;
+  color: var(--txt-dim);
+  line-height: 1.4;
 }
+
+.recent-keys-wrap {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 10px;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  text-align: left;
+}
+
+.recent-keys-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gold-light);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  letter-spacing: 0.5px;
+}
+
+.recent-keys-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.recent-key-item {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 2px 0;
+  transition: opacity 0.3s;
+}
+
+/* ── Stop button ── */
 
 /* ── Inputs ──────────────────────────────────── */
 .tx-label {
@@ -1747,4 +1795,41 @@
 .tx-tracker-link:hover {
   text-decoration: underline;
   color: var(--gold-light);
+}
+
+/* ── Action Links (Education & TxBuilder) ── */
+.action-links {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+  margin-bottom: 2rem;
+  width: 100%;
+}
+
+.action-link-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 10px 16px;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 13.5px;
+  font-weight: 500;
+  transition: all 0.2s;
+  flex: 1 1 250px;
+  max-width: 320px;
+}
+
+.action-link-btn:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }

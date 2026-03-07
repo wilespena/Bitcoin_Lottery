@@ -68,7 +68,9 @@ const MAX_BATCH = 10000000;
 
 function App() {
   const [state, setState] = useState(LotteryState.Normal);
-  const [lang, setLang] = useState<"en" | "pt" | "es">("en");
+  const [lang, setLang] = useState<"en" | "pt" | "es">(() => {
+    return (localStorage.getItem("app_lang") as "en" | "pt" | "es") || "en";
+  });
   const content = lang === "pt" ? ptContent : lang === "es" ? esContent : englishContent;
 
   // Real-time balances from mempool
@@ -83,10 +85,16 @@ function App() {
   const [keysChecked, setKeysChecked] = useState(0);
   const [keysPerSec, setKeysPerSec] = useState(0);
   const [foundKey, setFoundKey] = useState<{ hex: string; wif: string } | null>(null);
+  const [recentKeys, setRecentKeys] = useState<string[]>([]);
 
   // Custom Wallet support
   const [isCustomPuzzle, setIsCustomPuzzle] = useState(false);
-  const [customAddressInput, setCustomAddressInput] = useState("");
+  const [customAddressSaved, setCustomAddressSaved] = useState("");
+  const [customAddressBalance, setCustomAddressBalance] = useState<string | null>(null);
+  const [editingAddress, setEditingAddress] = useState(false);
+  const [addressInput, setAddressInput] = useState("");
+  const [addressError, setAddressError] = useState<string | null>(null);
+  const [isFetchingBalance, setIsFetchingBalance] = useState(false);
 
   const [customRange, setCustomRange] = useState<{ start: string; end: string } | null>(null);
   const [editingRange, setEditingRange] = useState(false);
@@ -163,6 +171,7 @@ function App() {
     setAttempts(0);
     setKeysChecked(0);
     setKeysPerSec(0);
+    setRecentKeys([]);
     keysCheckedRef.current = 0;
   };
 
@@ -178,6 +187,39 @@ function App() {
     setRangeInputEnd(activeRange.rangeEnd);
     setRangeError(null);
     setEditingRange(true);
+  };
+
+  const openAddressEditor = () => {
+    setAddressInput(customAddressSaved);
+    setAddressError(null);
+    setEditingAddress(true);
+  };
+
+  const applyCustomAddress = async () => {
+    const addr = addressInput.trim();
+    if (!addr) {
+      setAddressError(lang === "pt" ? "Insira um endereço válido." : lang === "es" ? "Ingresa una dirección válida." : "Enter a valid address.");
+      return;
+    }
+
+    setIsFetchingBalance(true);
+    setAddressError(null);
+    try {
+      const res = await fetch(`https://mempool.space/api/address/${addr}`);
+      if (!res.ok) {
+        throw new Error("Invalid address or network error");
+      }
+      const data = await res.json();
+      const totalSats = data.chain_stats.funded_txo_sum - data.chain_stats.spent_txo_sum;
+      setCustomAddressBalance(satsToDisplay(totalSats));
+      setCustomAddressSaved(addr);
+      setEditingAddress(false);
+      resetState();
+    } catch (e) {
+      setAddressError(lang === "pt" ? "Endereço inválido ou erro de rede." : lang === "es" ? "Dirección inválida o error de red." : "Invalid address or network error.");
+    } finally {
+      setIsFetchingBalance(false);
+    }
   };
 
   const applyCustomRange = () => {
@@ -208,16 +250,21 @@ function App() {
     stopRef.current = true;
     if (val === "custom") {
       setIsCustomPuzzle(true);
-      setCustomAddressInput("");
+      setCustomAddressSaved("");
+      setCustomAddressBalance(null);
       setCustomRange(null);
       setEditingRange(false);
       setRangeError(null);
+      setEditingAddress(false);
+      setAddressError(null);
     } else {
       setIsCustomPuzzle(false);
       setSelectedPuzzle(val as Puzzle);
       setCustomRange(null);
       setEditingRange(false);
       setRangeError(null);
+      setEditingAddress(false);
+      setAddressError(null);
     }
     resetState();
   };
@@ -241,7 +288,7 @@ function App() {
     if (elapsed > 0) setKeysPerSec(Math.round(totalKeys / elapsed));
   };
 
-  const activeAddress = isCustomPuzzle ? customAddressInput : selectedPuzzle.address;
+  const activeAddress = isCustomPuzzle ? customAddressSaved : selectedPuzzle.address;
 
   // ── Manual: random start + 50k sequential ────────────────────
   const playNormal = async () => {
@@ -275,13 +322,14 @@ function App() {
 
     if (result.success && result.privateKey) { handleSuccess(result.privateKey); return; }
     setTimeout(runInfiniteRandom, 0);
-  }, [activeAddress, activeRange]);  
+  }, [activeAddress, activeRange]);
 
   // ── Infinite sequential: random start + N sequential per batch ─
   const runInfiniteSequential = useCallback(async () => {
     if (stopRef.current) { setState(LotteryState.Normal); return; }
 
     const start = random32ByteRange(activeRange.rangeStart, activeRange.rangeEnd);
+    setRecentKeys((prev) => [start, ...prev].slice(0, 5));
     const result = await findPrivateKey(start, activeAddress, batchSize, activeRange.rangeEnd);
 
     keysCheckedRef.current += batchSize;
@@ -303,6 +351,7 @@ function App() {
     setResultMsg(null);
     setAttempts(0);
     setKeysChecked(0);
+    setRecentKeys([]);
     setKeysPerSec(0);
     if (searchMode === "inf-random") {
       setTimeout(runInfiniteRandom, 10);
@@ -312,9 +361,8 @@ function App() {
   };
 
   const handleRoll = () => {
-    if (isCustomPuzzle && (!customRange || !customAddressInput.trim())) {
-      setResultMsg(lang === "pt" ? "Preencha o Address e o Range Customizado." : lang === "es" ? "Complete la Dirección y el Rango." : "Fill Address and Custom Range.");
-      if (!customRange) setEditingRange(true);
+    if (isCustomPuzzle && (!customRange || !customAddressSaved.trim())) {
+      setResultMsg(lang === "pt" ? "Configure o endereço e os limites customizados primeiro." : lang === "es" ? "Configura la dirección y los límites primero." : "Set custom address and range first.");
       return;
     }
 
@@ -362,9 +410,33 @@ function App() {
 
       {/* ── Language switcher ───────────────── */}
       <div className="lang-switcher">
-        <button className={`lang-btn${lang === "en" ? " active" : ""}`} onClick={() => setLang("en")}>🇺🇸 EN</button>
-        <button className={`lang-btn${lang === "pt" ? " active" : ""}`} onClick={() => setLang("pt")}>🇧🇷 PT</button>
-        <button className={`lang-btn${lang === "es" ? " active" : ""}`} onClick={() => setLang("es")}>🇪🇸 ES</button>
+        <button
+          className={`lang-btn${lang === "en" ? " active" : ""}`}
+          onClick={() => {
+            setLang("en");
+            localStorage.setItem("app_lang", "en");
+          }}
+        >
+          🇺🇸 EN
+        </button>
+        <button
+          className={`lang-btn ${lang === "pt" ? "active" : ""}`}
+          onClick={() => {
+            setLang("pt");
+            localStorage.setItem("app_lang", "pt");
+          }}
+        >
+          🇧🇷 PT
+        </button>
+        <button
+          className={`lang-btn ${lang === "es" ? "active" : ""}`}
+          onClick={() => {
+            setLang("es");
+            localStorage.setItem("app_lang", "es");
+          }}
+        >
+          🇪🇸 ES
+        </button>
       </div>
 
       {/* ── Title ───────────────────────────── */}
@@ -403,19 +475,32 @@ function App() {
           <div className="target-badge">
             <div className="target-badge-main">
               {isCustomPuzzle ? (
-                <input
-                  type="text"
-                  className="custom-address-input"
-                  placeholder={lang === "pt" ? "Cole o endereço Bitcoin aqui..." : lang === "es" ? "Pega la dirección Bitcoin aquí..." : "Paste Bitcoin address here..."}
-                  value={customAddressInput}
-                  onChange={(e) => setCustomAddressInput(e.target.value)}
-                  spellCheck={false}
-                  autoComplete="off"
-                  style={{
-                    background: "rgba(0,0,0,0.4)", color: "#00ffcc", border: "1px solid #333",
-                    padding: "0.25rem 0.5rem", borderRadius: "0.25rem", width: "100%", fontFamily: "monospace", fontSize: "0.95em", textAlign: "center"
-                  }}
-                />
+                customAddressSaved ? (
+                  <>
+                    <span className="reward">
+                      {`\u20bf ${customAddressBalance}`}
+                    </span>
+                    <span className="dot" />
+                    <span className="address">{customAddressSaved}</span>
+                    {!editingAddress && (
+                      <button className="range-edit-btn" onClick={openAddressEditor} title={lang === "pt" ? "Editar endereço" : lang === "es" ? "Editar dirección" : "Edit address"}>
+                        ⚙️
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <span className="reward" style={{ color: "#ff4444" }}>ADDRESS:</span>
+                    <span className="range-value range-custom">
+                      <span style={{ color: "#ff4444" }}>{lang === "pt" ? "[Obrigatório]" : lang === "es" ? "[Requerido]" : "[Required]"}</span>
+                    </span>
+                    {!editingAddress && (
+                      <button className="range-edit-btn" onClick={openAddressEditor} title={lang === "pt" ? "Adicionar endereço" : lang === "es" ? "Añadir dirección" : "Add address"}>
+                        ⚙️
+                      </button>
+                    )}
+                  </>
+                )
               ) : (
                 <>
                   <span className="reward">
@@ -447,6 +532,33 @@ function App() {
               )}
             </div>
           </div>
+
+          {isCustomPuzzle && editingAddress && (
+            <div className="range-editor">
+              <div className="range-editor-row">
+                <label className="range-editor-label">Address</label>
+                <input
+                  className="range-editor-input"
+                  style={{ width: "100%" }}
+                  value={addressInput}
+                  onChange={(e) => { setAddressInput(e.target.value); setAddressError(null); }}
+                  spellCheck={false}
+                  placeholder={lang === "pt" ? "Cole o endereço..." : lang === "es" ? "Pega la dirección..." : "Paste address..."}
+                />
+              </div>
+              {addressError && <p className="range-error">{addressError}</p>}
+              <div className="range-editor-actions">
+                <button className="range-apply-btn" onClick={applyCustomAddress} disabled={isFetchingBalance}>
+                  {isFetchingBalance
+                    ? (lang === "pt" ? "Buscando..." : lang === "es" ? "Buscando..." : "Fetching...")
+                    : (lang === "pt" ? "Aplicar" : lang === "es" ? "Aplicar" : "Apply")}
+                </button>
+                <button className="range-cancel-btn" onClick={() => { setEditingAddress(false); setAddressError(null); }} disabled={isFetchingBalance}>
+                  {lang === "pt" ? "Cancelar" : lang === "es" ? "Cancelar" : "Cancel"}
+                </button>
+              </div>
+            </div>
+          )}
 
           {editingRange && (
             <div className="range-editor">
@@ -554,7 +666,7 @@ function App() {
 
         {/* ── Roll button ── */}
         {
-          state === LotteryState.Normal && (
+          state === LotteryState.Normal && (!isCustomPuzzle || customAddressSaved) && (
             <div className="action-row">
               <button
                 id="roll-btn"
@@ -608,6 +720,23 @@ function App() {
                         : "Testing random keys continuously...")}
                 </span>
               </div>
+
+              {/* ── Recent Keys for Sequential Mode ── */}
+              {searchMode === "inf-sequential" && recentKeys.length > 0 && (
+                <div className="recent-keys-wrap">
+                  <p className="recent-keys-title">
+                    {lang === "pt" ? "Últimas chaves de início (Start) geradas:" : lang === "es" ? "Últimas claves de inicio (Start) generadas:" : "Latest starting keys generated:"}
+                  </p>
+                  <div className="recent-keys-list">
+                    {recentKeys.map((k, i) => (
+                      <div key={i} className="recent-key-item" style={{ opacity: 1 - i * 0.15 }}>
+                        {k}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <button className="stop-button" onClick={handleStop}>
                 ⏹ {lang === "pt" ? "Parar" : lang === "es" ? "Detener" : "Stop"}
               </button>
@@ -689,11 +818,45 @@ function App() {
       </div >
 
       {/* ── Info footer ── */}
-      < p
+      <p
         className="puzzle-info"
-        dangerouslySetInnerHTML={{ __html: content["puzzle-info"] }
-        }
+        dangerouslySetInnerHTML={{ __html: content["puzzle-info"] }}
       />
+
+      {/* ── Action Links ── */}
+      <div className="action-links">
+        <a
+          href={lang === "pt" ? "./education-pt.html" : lang === "es" ? "./education-es.html" : "./education.html"}
+          target="_blank"
+          rel="noreferrer"
+          className="action-link-btn"
+        >
+          {content["btn-education"]}
+        </a>
+        <a
+          href="tx-builder.html"
+          onClick={(e) => {
+            e.preventDefault();
+            const base = window.location.href.split('?')[0].replace(/\/?(index\.html)?$/, '');
+            window.open(`${base}/tx-builder.html`, '_blank');
+          }}
+          className="action-link-btn"
+        >
+          {content["btn-txb"]}
+        </a>
+      </div>
+
+      {/* ── Global Footer ── */}
+      <div className="footer" style={{
+        marginTop: "3rem",
+        paddingTop: "1.5rem",
+        borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+        fontSize: "13px",
+        color: "rgba(255, 255, 255, 0.45)",
+        textAlign: "center"
+      }}>
+        {content.footer}
+      </div>
     </>
   );
 }

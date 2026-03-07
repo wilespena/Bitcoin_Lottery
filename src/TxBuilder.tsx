@@ -2,6 +2,10 @@ import { useState, useEffect } from "react";
 import { buildRawTransaction, deriveFromKey } from "./bitcoin";
 import "./App.css";
 
+import englishContent from "./languages/english";
+import ptContent from "./languages/portuguese";
+import esContent from "./languages/spanish";
+
 const BTC_TO_SAT = 100_000_000;
 const ESTIMATED_TX_BYTES = 226; // typical P2PKH 1-in 1-out
 
@@ -21,6 +25,11 @@ interface MempoolUTXO {
 }
 
 export default function TxBuilder() {
+    const [lang, setLang] = useState<"en" | "pt" | "es">(() => {
+        return (localStorage.getItem("app_lang") as "en" | "pt" | "es") || "en";
+    });
+    const content = lang === "pt" ? ptContent : lang === "es" ? esContent : englishContent;
+
     const [privateKey, setPrivateKey] = useState("");
     const [derivedAddress, setDerivedAddress] = useState<string | null>(null);
     const [derivedPubkey, setDerivedPubkey] = useState<string | null>(null);
@@ -85,9 +94,9 @@ export default function TxBuilder() {
             setDerivedAddress(address);
             setDerivedPubkey(pubkeyHex);
         } catch (e: unknown) {
-            setDeriveError("Invalid private key: " + (e instanceof Error ? e.message : String(e)));
+            setDeriveError(content.txb.deriveErrorInvalid + (e instanceof Error ? e.message : String(e)));
         }
-    }, [privateKey]);
+    }, [privateKey, content.txb.deriveErrorInvalid]);
 
     // Auto-fetch UTXOs whenever address is derived
     useEffect(() => {
@@ -106,12 +115,12 @@ export default function TxBuilder() {
                     // Auto-fill if only one UTXO
                     selectUtxo(data[0]);
                 } else if (data.length === 0) {
-                    setUtxoError("No UTXOs found — this address has no unspent balance. Double-check the private key.");
+                    setUtxoError(content.txb.utxoErrNoBalance);
                 }
             })
-            .catch((e: unknown) => setUtxoError("Could not fetch UTXOs from mempool.space — check your internet connection. (" + (e instanceof Error ? e.message : "network error") + ")"))
+            .catch((e: unknown) => setUtxoError(content.txb.utxoErrNetwork + " (" + (e instanceof Error ? e.message : "network error") + ")"))
             .finally(() => setFetchingUtxos(false));
-    }, [derivedAddress]);
+    }, [derivedAddress, content.txb.utxoErrNoBalance, content.txb.utxoErrNetwork]);
 
     const selectUtxo = (u: MempoolUTXO) => {
         setTxid(u.txid);
@@ -133,15 +142,23 @@ export default function TxBuilder() {
         setBuildError(null);
         setCopied(false);
 
-        if (!privateKey.trim()) return setBuildError("Enter a private key.");
+        if (!privateKey.trim()) return setBuildError(content.txb.errPrivKey);
         if (deriveError) return setBuildError(deriveError);
-        if (!isValidTxid(txid)) return setBuildError("TXID must be 64 hex characters.");
-        if (isNaN(parseInt(vout)) || parseInt(vout) < 0) return setBuildError("Invalid output index.");
-        if (!spendBtc || spendSats <= 0) return setBuildError("Enter the amount to send in BTC.");
-        if (!destAddress.trim()) return setBuildError("Enter a destination address.");
+        if (!isValidTxid(txid)) return setBuildError(content.txb.errTxid);
+        if (isNaN(parseInt(vout)) || parseInt(vout) < 0) return setBuildError(content.txb.errVout);
+        if (!amountBtc || amountSats <= 0) return setBuildError(content.txb.errAmount);
+        if (!spendBtc || spendSats <= 0) return setBuildError(content.txb.errSendAmount);
+        if (!destAddress.trim()) return setBuildError(content.txb.errDest);
         if (feeSats <= 0) return setBuildError("Fee rate must be > 0.");
-        if (spendSats < 546) return setBuildError(`Send amount too low. Minimum is 546 sats.`);
-        if (changeSats < 0) return setBuildError(`Insufficient funds! Need ${Math.abs(changeSats)} more sats to cover amount + fee.`);
+        if (spendSats < 546) return setBuildError(content.txb.errAmountTooLow);
+        if (changeSats < 0) {
+            let msg = content.txb.errInsufficient;
+            msg = msg.replace("{0}", amountSats.toString())
+                .replace("{1}", spendSats.toString())
+                .replace("{2}", feeSats.toString())
+                .replace("{3}", Math.abs(changeSats).toString());
+            return setBuildError(msg);
+        }
 
         try {
             const hex = buildRawTransaction({
@@ -157,9 +174,9 @@ export default function TxBuilder() {
             setRawHex(hex);
         } catch (err: unknown) {
             if (err instanceof Error) {
-                setBuildError(err.message || "Unknown error building transaction.");
+                setBuildError(err.message || content.txb.errUnknown);
             } else {
-                setBuildError("Unknown error building transaction.");
+                setBuildError(content.txb.errUnknown);
             }
         }
     };
@@ -176,25 +193,52 @@ export default function TxBuilder() {
         <div className="tx-builder-root">
             <div className="tx-builder-container">
 
+                {/* ── Language switcher ───────────────── */}
+                <div className="lang-switcher" style={{ marginTop: '0', top: '10px' }}>
+                    <button
+                        className={`lang-btn${lang === "en" ? " active" : ""}`}
+                        onClick={() => {
+                            setLang("en");
+                            localStorage.setItem("app_lang", "en");
+                        }}
+                    >
+                        🇺🇸 EN
+                    </button>
+                    <button
+                        className={`lang-btn ${lang === "pt" ? "active" : ""}`}
+                        onClick={() => {
+                            setLang("pt");
+                            localStorage.setItem("app_lang", "pt");
+                        }}
+                    >
+                        🇧🇷 PT
+                    </button>
+                    <button
+                        className={`lang-btn ${lang === "es" ? "active" : ""}`}
+                        onClick={() => {
+                            setLang("es");
+                            localStorage.setItem("app_lang", "es");
+                        }}
+                    >
+                        🇪🇸 ES
+                    </button>
+                </div>
+
                 {/* Header */}
-                <a className="back-link" href="./">← Back to Bitcoin Lottery</a>
-                <h1 className="tx-builder-title">⚡ Transaction Builder</h1>
-                <p className="tx-builder-subtitle">
-                    Build a signed raw transaction to broadcast privately via{" "}
-                    <a href="https://slipstream.mara.com/" target="_blank" rel="noreferrer">MARA Slipstream</a>
-                    {" "}— without exposing your key to the public mempool.
-                </p>
+                <a className="back-link" href="./">{content.txb.back}</a>
+                <h1 className="tx-builder-title">⚡ {content.txb.title}</h1>
+                <p className="tx-builder-subtitle" dangerouslySetInnerHTML={{ __html: content.txb.subtitle }}></p>
 
                 {/* Step 1: Private Key */}
                 <div className="tx-card">
                     <div className="tx-card-header">
                         <span className="tx-step-num">1</span>
-                        <span className="tx-card-title">Private Key of the Puzzle Address</span>
+                        <span className="tx-card-title">{content.txb.step1}</span>
                     </div>
-                    <p className="tx-card-hint">Paste the WIF or HEX private key you found in the lottery.</p>
+                    <p className="tx-card-hint">{content.txb.step1Hint}</p>
                     <input
-                        className={`tx-input tx-mono ${buildError?.includes("private key") ? "tx-input-error" : ""}`}
-                        placeholder="WIF (5... / K... / L...) or HEX (64 chars)"
+                        className={`tx-input tx-mono ${buildError?.includes("private key") || buildError === content.txb.errPrivKey ? "tx-input-error" : ""}`}
+                        placeholder={content.txb.step1Input}
                         value={privateKey}
                         onChange={(e) => setPrivateKey(e.target.value)}
                         spellCheck={false}
@@ -202,15 +246,15 @@ export default function TxBuilder() {
                     {derivedAddress && (
                         <div className="tx-derived-box">
                             <div className="tx-derived-row">
-                                <span className="tx-derived-label">Derived address</span>
+                                <span className="tx-derived-label">{content.txb.deriveLabelAddr}</span>
                                 <span className="tx-derived-value tx-mono">{derivedAddress}</span>
                             </div>
                             <div className="tx-derived-row">
-                                <span className="tx-derived-label">Public key</span>
+                                <span className="tx-derived-label">{content.txb.deriveLabelPub}</span>
                                 <span className="tx-derived-value tx-mono small">{derivedPubkey}</span>
                             </div>
                             <p className="tx-derived-note">
-                                ✅ Confirm this matches the puzzle address you found the key for.
+                                {content.txb.deriveNote}
                             </p>
                         </div>
                     )}
@@ -222,21 +266,21 @@ export default function TxBuilder() {
                     <div className="tx-card-header">
                         <span className="tx-step-num">2</span>
                         <span className="tx-card-title">UTXO — Source of Funds</span>
-                        {fetchingUtxos && <span className="tx-utxo-spinner">⏳ Fetching...</span>}
+                        {fetchingUtxos && <span className="tx-utxo-spinner">⏳ {content.txb.loadingUtxos}</span>}
                     </div>
 
                     {/* Auto-fetch status */}
                     {!derivedAddress && (
-                        <p className="tx-card-hint">Enter your private key above to auto-load the UTXO.</p>
+                        <p className="tx-card-hint">{content.txb.utxoHintEnterKey}</p>
                     )}
                     {derivedAddress && fetchingUtxos && (
-                        <p className="tx-card-hint">🔍 Fetching UTXOs from mempool.space for <code className="tx-addr-code">{derivedAddress}</code>...</p>
+                        <p className="tx-card-hint">🔍 {content.txb.autoFetch} <code className="tx-addr-code">{derivedAddress}</code>...</p>
                     )}
                     {utxoError && !fetchingUtxos && (
                         <div className="tx-utxo-error">
                             ⚠️ {utxoError}{" "}
                             <a href={`https://mempool.space/address/${derivedAddress || ""}`} target="_blank" rel="noreferrer">
-                                Check on mempool.space
+                                {content.txb.checkMempool}
                             </a>
                         </div>
                     )}
@@ -244,7 +288,7 @@ export default function TxBuilder() {
                     {/* Multiple UTXOs — show selector */}
                     {utxos.length > 1 && !fetchingUtxos && (
                         <div className="tx-utxo-list">
-                            <p className="tx-label" style={{ marginTop: 0 }}>Select which UTXO to spend</p>
+                            <p className="tx-label" style={{ marginTop: 0 }}>{content.txb.utxoListSelect}</p>
                             {utxos.map((u) => (
                                 <button
                                     key={`${u.txid}-${u.vout}`}
@@ -253,7 +297,7 @@ export default function TxBuilder() {
                                 >
                                     <span className="tx-utxo-val">{(u.value / BTC_TO_SAT).toFixed(8)} BTC</span>
                                     <span className="tx-utxo-meta">
-                                        {u.status.confirmed ? `✅ Confirmed (block ${u.status.block_height})` : "⏳ Unconfirmed"}
+                                        {u.status.confirmed ? content.txb.utxoConfirmed.replace("{0}", String(u.status.block_height)) : content.txb.utxoUnconfirmed}
                                     </span>
                                     <span className="tx-utxo-txid">{u.txid.slice(0, 20)}…:{u.vout}</span>
                                 </button>
@@ -264,29 +308,29 @@ export default function TxBuilder() {
                     {/* Single UTXO confirmed — show confirmation pill */}
                     {utxos.length === 1 && !fetchingUtxos && (
                         <div className="tx-utxo-auto">
-                            ✅ UTXO auto-filled:{" "}
+                            {content.txb.utxoAutoFilled}
                             <strong>{(utxos[0].value / BTC_TO_SAT).toFixed(8)} BTC</strong>
                             {" · "}
                             {utxos[0].status.confirmed
-                                ? `Confirmed (block ${utxos[0].status.block_height})`
-                                : "⏳ Unconfirmed — wait for confirmation before spending"}
+                                ? content.txb.utxoConfirmed.replace("{0}", String(utxos[0].status.block_height))
+                                : content.txb.utxoAutoWait}
                         </div>
                     )}
 
                     {/* Editable fields (always visible for manual override) */}
                     {derivedAddress && (
                         <>
-                            <label className="tx-label">Transaction ID (TxID)</label>
+                            <label className="tx-label">{content.txb.txidLabel}</label>
                             <input
-                                className={`tx-input tx-mono ${buildError?.includes("TXID") ? "tx-input-error" : ""}`}
-                                placeholder="64-character hex txid"
+                                className={`tx-input tx-mono ${buildError?.includes("TXID") || buildError === content.txb.errTxid ? "tx-input-error" : ""}`}
+                                placeholder={content.txb.txidPlaceholder}
                                 value={txid}
                                 onChange={(e) => setTxid(e.target.value)}
                                 spellCheck={false}
                             />
                             <div className="tx-row-2col">
                                 <div>
-                                    <label className="tx-label">UTXO Total (BTC)</label>
+                                    <label className="tx-label">{content.txb.utxoTotalBtcLabel}</label>
                                     <input
                                         className="tx-input tx-mono"
                                         type="number"
@@ -295,23 +339,23 @@ export default function TxBuilder() {
                                         placeholder="UTXO total"
                                         value={amountBtc}
                                         onChange={(e) => setAmountBtc(e.target.value)}
-                                        title="The total value of the unspent output you are claiming"
+                                        title={content.txb.utxoTotalBtcTitle}
                                     />
                                 </div>
                                 <div>
-                                    <label className="tx-label">Send Amount (BTC)</label>
+                                    <label className="tx-label">{content.txb.amountBtcLabel}</label>
                                     <input
-                                        className={`tx-input tx-mono highlight-input ${buildError?.includes("amount to send") || buildError?.includes("amount too low") || buildError?.includes("Insufficient") ? "tx-input-error" : ""}`}
+                                        className={`tx-input tx-mono highlight-input ${buildError?.includes("amount to send") || buildError?.includes("amount too low") || buildError?.includes("Insufficient") || buildError === content.txb.errSendAmount || buildError === content.txb.errAmountTooLow ? "tx-input-error" : ""}`}
                                         type="number"
                                         min="0"
                                         step="0.00000001"
-                                        placeholder="Amount to send"
+                                        placeholder={content.txb.amountBtcPlaceholder}
                                         value={spendBtc}
                                         onChange={(e) => setSpendBtc(e.target.value)}
-                                        title="The exact amount you want the destination address to receive"
+                                        title={content.txb.amountBtcTitle}
                                     />
                                     {spendSats > 0 && (
-                                        <span className="tx-note">{spendSats.toLocaleString()} satoshis to send</span>
+                                        <span className="tx-note">{spendSats.toLocaleString()} {content.txb.satoshis}</span>
                                     )}
                                 </div>
                             </div>
@@ -324,15 +368,15 @@ export default function TxBuilder() {
                 <div className="tx-card">
                     <div className="tx-card-header">
                         <span className="tx-step-num">3</span>
-                        <span className="tx-card-title">Destination Address</span>
+                        <span className="tx-card-title">{content.txb.step2}</span>
                     </div>
                     <p className="tx-card-hint">
-                        A fresh wallet address you control. Use a cold wallet — NOT an exchange address.
+                        {content.txb.destHint}
                     </p>
-                    <label className="tx-label">Send to</label>
+                    <label className="tx-label">{content.txb.sendToLabel}</label>
                     <input
-                        className={`tx-input tx-mono ${buildError?.includes("destination address") ? "tx-input-error" : ""}`}
-                        placeholder="bc1q... or 1... or 3..."
+                        className={`tx-input tx-mono ${buildError?.includes("destination address") || buildError === content.txb.errDest ? "tx-input-error" : ""}`}
+                        placeholder={content.txb.sendToPlaceholder}
                         value={destAddress}
                         onChange={(e) => setDestAddress(e.target.value)}
                         spellCheck={false}
@@ -343,12 +387,12 @@ export default function TxBuilder() {
                 <div className="tx-card">
                     <div className="tx-card-header">
                         <span className="tx-step-num">4</span>
-                        <span className="tx-card-title">Transaction Fee</span>
-                        {fetchingFees && <span className="tx-utxo-spinner">⏳ Fetching...</span>}
+                        <span className="tx-card-title">{content.txb.step3}</span>
+                        {fetchingFees && <span className="tx-utxo-spinner">⏳ {content.txb.loadingUtxos}</span>}
                     </div>
-                    <p className="tx-card-hint">
-                        MARA Slipstream minimum = <strong>2× current priority fee or 2 sat/vB</strong>, whichever is higher.
-                        A P2PKH 1-in 1-out tx is ~{ESTIMATED_TX_BYTES} bytes.
+                    <p className="tx-card-hint" dangerouslySetInnerHTML={{ __html: content.txb.step3Hint }}></p>
+                    <p className="tx-card-hint" style={{ marginTop: '-4px' }}>
+                        {content.txb.feeNote.replace('{0}', String(ESTIMATED_TX_BYTES))}
                     </p>
 
                     {/* Fee presets */}
@@ -358,32 +402,32 @@ export default function TxBuilder() {
                                 className={`tx-fee-preset mara-min ${feeRate === String(maraMin) ? "selected" : ""}`}
                                 onClick={() => setFeeRate(String(maraMin))}
                             >
-                                <span className="preset-label">Normal ⛏</span>
+                                <span className="preset-label">{content.txb.feeMin}</span>
                                 <span className="preset-rate">{maraMin} sat/vB</span>
-                                <span className="preset-sub">MARA min</span>
+                                <span className="preset-sub">{content.txb.subMaraMin}</span>
                             </button>
                             <button
                                 className={`tx-fee-preset ${feeRate === String(maraMin * 2) ? "selected" : ""}`}
                                 onClick={() => setFeeRate(String(maraMin * 2))}
                             >
-                                <span className="preset-label">2X ⚡</span>
+                                <span className="preset-label">{content.txb.fee2x}</span>
                                 <span className="preset-rate">{maraMin * 2} sat/vB</span>
-                                <span className="preset-sub">2× MARA min</span>
+                                <span className="preset-sub">{content.txb.sub2xMaraMin}</span>
                             </button>
                             <button
                                 className={`tx-fee-preset ${feeRate === String(maraMin * 3) ? "selected" : ""}`}
                                 onClick={() => setFeeRate(String(maraMin * 3))}
                             >
-                                <span className="preset-label">3X 🚀</span>
+                                <span className="preset-label">{content.txb.fee3x}</span>
                                 <span className="preset-rate">{maraMin * 3} sat/vB</span>
-                                <span className="preset-sub">3× MARA min</span>
+                                <span className="preset-sub">{content.txb.sub3xMaraMin}</span>
                             </button>
                         </div>
                     )}
 
                     <div className="tx-row-2col">
                         <div>
-                            <label className="tx-label">Custom fee rate (sat/vB)</label>
+                            <label className="tx-label">{content.txb.customFeeLabel}</label>
                             <input
                                 className="tx-input tx-mono"
                                 type="number"
@@ -392,23 +436,23 @@ export default function TxBuilder() {
                                 value={feeRate}
                                 onChange={(e) => setFeeRate(e.target.value)}
                             />
-                            <span className="tx-note">Min: {maraMin} sat/vB (MARA Slipstream requirement)</span>
+                            <span className="tx-note">{content.txb.maraMinReq.replace('{0}', String(maraMin))}</span>
                         </div>
                         <div className="tx-fee-summary">
                             <div className="tx-fee-row">
-                                <span>Total UTXO Input</span>
+                                <span>{content.txb.summaryTotalIn}</span>
                                 <strong>{amountSats.toLocaleString()} sats</strong>
                             </div>
                             <div className="tx-fee-row">
-                                <span>Estimated Miner Fee</span>
+                                <span>{content.txb.summaryFee}</span>
                                 <strong className="tx-minus">- {feeSats.toLocaleString()} sats</strong>
                             </div>
                             <div className="tx-fee-row">
-                                <span>Sent to Destination</span>
+                                <span>{content.txb.summarySent}</span>
                                 <strong className="tx-minus">- {spendSats > 0 ? `${spendSats.toLocaleString()} sats` : "0 sats"}</strong>
                             </div>
                             <div className="tx-fee-row" style={{ marginTop: '4px', paddingTop: '4px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-                                <span>Change (Back to you)</span>
+                                <span>{content.txb.summaryChange}</span>
                                 <strong className={changeSats >= 0 ? "tx-plus" : "tx-error"}>
                                     {changeSats > 0 ? `+ ${changeSats.toLocaleString()} sats` : `${changeSats.toLocaleString()} sats`}
                                 </strong>
@@ -417,7 +461,7 @@ export default function TxBuilder() {
                     </div>
 
                     <button className="tx-submit-btn" onClick={handleGenerate}>
-                        🔑 Generate Signed Raw Transaction
+                        {content.txb.generateBtn}
                     </button>
 
                     {buildError && (
@@ -428,9 +472,9 @@ export default function TxBuilder() {
                     {rawHex && (
                         <div className="tx-output-card">
                             <div className="tx-output-header">
-                                <span className="tx-output-title">✅ Signed Raw Transaction (Hex)</span>
+                                <span className="tx-output-title">{content.txb.outputTitle}</span>
                                 <button className="tx-copy-btn" onClick={handleCopy}>
-                                    {copied ? "✓ Copied!" : "Copy"}
+                                    {copied ? content.txb.copied : content.txb.copy}
                                 </button>
                             </div>
                             <textarea
@@ -442,11 +486,11 @@ export default function TxBuilder() {
                             />
 
                             <div className="tx-instructions">
-                                <h4 className="tx-instructions-title">Next Steps:</h4>
+                                <h4 className="tx-instructions-title">{content.txb.nextStepsTitle}</h4>
                                 <ol className="tx-instructions-list">
-                                    <li>Click <strong>Copy</strong> to save your Raw Transaction HEX.</li>
-                                    <li>Click the button below to open <strong>MARA Slipstream</strong>.</li>
-                                    <li>Paste your hex into their form and click <strong>Submit</strong>!</li>
+                                    <li dangerouslySetInnerHTML={{ __html: content.txb.stepCopy }}></li>
+                                    <li dangerouslySetInnerHTML={{ __html: content.txb.stepOpen }}></li>
+                                    <li dangerouslySetInnerHTML={{ __html: content.txb.stepPaste }}></li>
                                 </ol>
                             </div>
 
@@ -459,7 +503,7 @@ export default function TxBuilder() {
                                         target="_blank"
                                         rel="noreferrer"
                                     >
-                                        ⛏ Open Website to submit manually →
+                                        {content.txb.openMaraBtn}
                                     </a>
                                 </div>
                             </div>

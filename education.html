@@ -209,19 +209,58 @@
       margin: 2.5rem 0;
     }
 
-    .footer {
-      margin-top: 3rem;
-      padding-top: 1.5rem;
-      border-top: 1px solid var(--border);
-      font-size: 13px;
+    .disclaimer {
+      font-size: 0.85rem;
       color: var(--muted);
-      text-align: center;
+      margin-top: 3rem;
+      border-top: 1px solid var(--border);
+      padding-top: 1.5rem;
+      opacity: 0.8;
+    }
+
+    /* Lang Switcher */
+    .lang-switcher {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-bottom: 2rem;
+    }
+
+    .lang-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.45);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .lang-btn:hover {
+      background: rgba(245, 159, 0, 0.12);
+      border-color: rgba(245, 159, 0, 0.4);
+      color: var(--gold-light);
+    }
+
+    .lang-btn.active {
+      background: rgba(245, 159, 0, 0.12);
+      border-color: rgba(245, 159, 0, 0.4);
+      color: var(--gold-light);
     }
   </style>
 </head>
 
 <body>
   <div class="container">
+    <div class="lang-switcher">
+      <button class="lang-btn active" onclick="switchLang('en')">🇺🇸 EN</button>
+      <button class="lang-btn" onclick="switchLang('pt')">🇧🇷 PT</button>
+      <button class="lang-btn" onclick="switchLang('es')">🇪🇸 ES</button>
+    </div>
+
     <a class="back-link" href="./">← Back to Bitcoin Lottery</a>
 
     <h1>🏆 You found the key — now what?</h1>
@@ -408,7 +447,6 @@
       </div>
     </div>
 
-
     <hr>
 
     <!-- DONATION -->
@@ -422,10 +460,20 @@
       <div class="address-box">bc1qlzydlvx8s2d2lgumzfxzwnah2paqszm3plrq40</div>
     </div>
 
-    <div class="footer">
-      Bitcoin Lottery · Open-source · 100% browser-based · No servers · No tracking
+    <div class="disclaimer">
+      Bitcoin Lottery · Open-source · 100% browser-based · No servers · No tracking. The creator assumes NO LIABILITY.
+      Verify everything yourself.
     </div>
   </div>
+
+  <script>
+    function switchLang(lang) {
+      localStorage.setItem("app_lang", lang);
+      if (lang === "en") window.location.href = "education.html";
+      else if (lang === "pt") window.location.href = "education-pt.html";
+      else if (lang === "es") window.location.href = "education-es.html";
+    }
+  </script>
 </body>
 
 </html>
