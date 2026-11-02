@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://mempool.space; object-src 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="referrer" content="no-referrer" />
+  <title>Bitcoin Lottery — What to do if I find the key?</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+    :root {
+      --gold: #f59f00;
+      --gold-light: #fcc419;
+      --bg: #0f0e0a;
+      --surface: rgba(255, 255, 255, 0.04);
+      --border: rgba(255, 255, 255, 0.08);
+      --text: rgba(255, 255, 255, 0.87);
+      --muted: rgba(255, 255, 255, 0.45);
+      --mono: 'JetBrains Mono', monospace;
+      --red: #f87171;
+      --green: #86efac;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background-color: var(--bg);
+      background-image: radial-gradient(ellipse at 50% 0%, rgba(245, 159, 0, 0.06) 0%, transparent 70%);
+      color: var(--text);
+      line-height: 1.7;
+      padding: 2.5rem 1.5rem 5rem;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--gold);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 2.5rem;
+      opacity: 0.8;
+      transition: opacity 0.2s;
+    }
+
+    .back-link:hover {
+      opacity: 1;
+    }
+
+    h1 {
+      font-size: clamp(1.6rem, 4vw, 2.2rem);
+      font-weight: 700;
+      color: var(--gold-light);
+      margin-bottom: 0.5rem;
+      line-height: 1.2;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 1rem;
+      margin-bottom: 2.5rem;
+    }
+
+    h2 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--gold);
+      margin: 2rem 0 0.75rem;
+    }
+
+    p {
+      margin-bottom: 1rem;
+      color: var(--text);
+      font-size: 1rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+    }
+
+    .card.danger {
+      border-color: rgba(248, 113, 113, 0.35);
+      background: rgba(248, 113, 113, 0.06);
+    }
+
+    .card.success {
+      border-color: rgba(134, 239, 172, 0.35);
+      background: rgba(134, 239, 172, 0.06);
+    }
+
+    .card.gold {
+      border-color: rgba(245, 159, 0, 0.4);
+      background: rgba(245, 159, 0, 0.06);
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 3px 10px;
+      border-radius: 999px;
+      margin-bottom: 0.75rem;
+    }
+
+    .badge.red {
+      background: rgba(248, 113, 113, 0.15);
+      color: var(--red);
+      border: 1px solid rgba(248, 113, 113, 0.3);
+    }
+
+    .badge.green {
+      background: rgba(134, 239, 172, 0.15);
+      color: var(--green);
+      border: 1px solid rgba(134, 239, 172, 0.3);
+    }
+
+    .badge.gold {
+      background: rgba(245, 159, 0, 0.15);
+      color: var(--gold-light);
+      border: 1px solid rgba(245, 159, 0, 0.3);
+    }
+
+    .step {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 1.25rem;
+      align-items: flex-start;
+    }
+
+    .step-num {
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(245, 159, 0, 0.15);
+      border: 1px solid rgba(245, 159, 0, 0.4);
+      color: var(--gold);
+      font-weight: 700;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .step-body {
+      flex: 1;
+      padding-top: 4px;
+    }
+
+    code {
+      font-family: var(--mono);
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      padding: 2px 7px;
+      font-size: 0.88em;
+      color: var(--gold-light);
+      word-break: break-all;
+    }
+
+    .address-box {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: var(--gold-light);
+      word-break: break-all;
+      margin-top: 0.5rem;
+    }
+
+    a {
+      color: var(--gold);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    a:hover {
+      color: var(--gold-light);
+      text-decoration: underline;
+    }
+
+    strong {
+      color: var(--gold-light);
+    }
+
+    hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 2.5rem 0;
+    }
+
+    .disclaimer {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 3rem;
+      border-top: 1px solid var(--border);
+      padding-top: 1.5rem;
+      opacity: 0.8;
+    }
+
+    /* Lang Switcher */
+
+    .lang-switcher {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-bottom: 2rem;
+    }
+
+    .lang-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.45);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .lang-btn:hover {
+      background: rgba(245, 159, 0, 0.12);
+      border-color: rgba(245, 159, 0, 0.4);
+      color: var(--gold-light);
+    }
+
+    .lang-btn.active {
+      background: rgba(245, 159, 0, 0.12);
+      border-color: rgba(245, 159, 0, 0.4);
+      color: var(--gold-light);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="lang-switcher">
+      <button class="lang-btn active" type="button" data-lang="en">🇺🇸 EN</button>
+      <button class="lang-btn" type="button" data-lang="pt">🇧🇷 PT</button>
+      <button class="lang-btn" type="button" data-lang="es">🇪🇸 ES</button>
+    </div>
+
+    <a class="back-link" href="./">← Back to Bitcoin Lottery</a>
+
+    <h1>🏆 You found the key — now what?</h1>
+    <p class="subtitle">Read this carefully before doing anything. One wrong move could cost you everything.</p>
+
+    <!-- O QUE É O PUZZLE -->
+    <div class="card gold">
+      <span class="badge gold">🧩 Background</span>
+      <h2 style="margin-top:0">What is the Bitcoin Puzzle?</h2>
+      <p>
+        In 2015, an anonymous individual sent Bitcoin to <strong>256 different wallet addresses</strong>, each one
+        containing
+        a private key that falls within a progressively larger range of difficulty.
+        The amounts grow with the puzzle number — puzzle #1 has 0.001 BTC, puzzle #71 has 7.1 BTC, and so on up to
+        puzzle #256.
+      </p>
+      <p>
+        The challenge was designed to test the limits of brute-force key searching and to reward anyone clever (or
+        lucky) enough
+        to find the private key. The ranges are known — the puzzle creator published them — but the search space is
+        astronomically large.
+        Puzzle #71 alone has over <strong>2.3 quintillion possible keys</strong>.
+      </p>
+      <p>
+        Some lower-numbered puzzles have already been solved. The higher ones remain open.
+        All funds are sitting untouched on the blockchain, waiting for whoever finds the key first.
+      </p>
+      <p style="margin-bottom:0">
+        📖 Full puzzle list and status:
+        <a href="https://privatekeys.pw/puzzles/bitcoin-puzzle-tx" target="_blank" rel="noreferrer">
+          privatekeys.pw/puzzles/bitcoin-puzzle-tx
+        </a>
+      </p>
+    </div>
+
+    <!-- WHY NOT SIMPLE -->
+    <div class="card danger">
+      <span class="badge red">⚠️ Warning</span>
+      <h2 style="margin-top:0">Claiming is NOT as simple as sending a transaction</h2>
+      <p>
+        The moment you broadcast a transaction from the puzzle address, you expose its <strong>public key</strong> to
+        the entire network.
+        Automated bots monitor the mempool 24/7 looking for exactly this.
+        They can instantly submit a competing transaction with a higher fee, stealing your Bitcoin before your
+        transaction confirms.
+      </p>
+      <p>
+        <strong>Disabling RBF (Replace-By-Fee) does NOT protect you.</strong>
+        Bots can still use other fee-bumping strategies. The public key exposure is the real vulnerability.
+      </p>
+    </div>
+
+    <!-- KANGAROO EXPLANATION -->
+    <h2>🦘 Why is the public key a problem?</h2>
+    <p>
+      Bitcoin puzzle addresses are generated from a known private key range. Researchers and bots have already computed
+      the <strong>public keys</strong> for many of these addresses using algorithms like
+      <a href="https://github.com/demining/Kangaroo-by-JeanLucPons" target="_blank" rel="noopener noreferrer">Pollard's
+        Kangaroo</a>.
+      Once your transaction hits the mempool, they know the public key and can craft a conflicting transaction faster
+      than yours confirms.
+    </p>
+    <p>
+      🧬 Want to see how a Private Key becomes a Public Key, Hash160, and Address? Explore the interactive
+      <a href="./key-anatomy.html">Bitcoin Key Anatomy Lab →</a>
+    </p>
+
+    <hr>
+
+    <!-- MARA SAFE METHOD -->
+    <div class="card success">
+      <span class="badge green">✅ Recommended Method</span>
+      <h2 style="margin-top:0">Safe withdrawal via MARA Slipstream</h2>
+      <p>
+        <a href="https://slipstream.mara.com/" target="_blank" rel="noreferrer">MARA Slipstream</a> is a private
+        transaction submission service
+        by Marathon Digital Holdings, one of the largest Bitcoin mining pools.
+        When you submit a transaction through Slipstream, <strong>it is never broadcast to the public mempool</strong>.
+        MARA mines it directly into a block silently — your public key is only revealed <em>after</em> the block is
+        confirmed.
+        By then, it's too late for bots to do anything.
+      </p>
+    </div>
+
+    <h2>📋 Step-by-step: How to claim safely</h2>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <strong>Do NOT broadcast anything yet.</strong><br>
+        Close any wallet that might auto-broadcast. Do not import the private key into a standard wallet connected to
+        the internet.
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <strong>Use the built-in Transaction Builder.</strong><br>
+        When you find the key, a green button <em>"⚡ Build Transaction for MARA Slipstream"</em> appears automatically
+        on the lottery screen. Click it to open the Transaction Builder — it will pre-fill your private key.
+        The tool fetches your UTXO data directly from <a href="https://mempool.space" target="_blank"
+          rel="noreferrer">mempool.space</a>
+        and signs the transaction <strong>100% in your browser</strong> — no server, no key ever leaves your device.
+        You do NOT need Electrum or any other wallet.
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <strong>Set a competitive fee rate.</strong><br>
+        The builder automatically fetches current fee rates from mempool.space and calculates the
+        <strong>MARA Slipstream minimum</strong> for you: <code>max(2 × priority fee, 2 sat/vByte)</code>.
+        Three presets are shown — Normal ⛏ (MARA min), Priority ⚡ (2×) and Fast 🚀 (3×).
+        Choose at least the MARA minimum so your transaction gets included.
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <strong>Copy the Payload and submit it on MARA Slipstream.</strong><br>
+        The TxBuilder does NOT submit the transaction automatically (to avoid browser CORS restrictions).
+        Instead, it produces a clean signed HEX payload. Click <em>"Copy"</em> or use the link to open
+        the official <a href="https://slipstream.mara.com/" target="_blank" rel="noreferrer">MARA Slipstream portal</a>
+        in a new tab. Paste the code there and click Submit.
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <strong>Move your funds to cold storage.</strong><br>
+        MARA will show you the block status on their site. After the first confirmation on the blockchain,
+        immediately send the BTC from the intermediate address you provided in the builder to your
+        final secure cold wallet (Hardware wallet). From here, any normal transaction is 100% safe.
+      </div>
+    </div>
+
+    <div class="card gold">
+      <span class="badge gold">💡 How the fee is auto-calculated</span>
+      <p style="margin:0">
+        The Transaction Builder calls <code>mempool.space/api/v1/fees/recommended</code> on load.
+        MARA's documented minimum is <strong>the higher of 2× current priority fee rate or 2 sat/vByte</strong>.
+        The builder uses this formula to freeze the exact sat fee and builds the Raw Transaction with the precision
+        required by institutional mining pools. (Never decrease the fee input — only increase if you need to compete
+        during peak mempool moments.)
+      </p>
+    </div>
+
+
+    <hr>
+
+    <!-- HOW IT WORKS -->
+    <h2>🔍 How does this lottery work?</h2>
+    <p>
+      This app runs <strong>100% in your browser</strong> — no server, no API calls, no data transmitted anywhere.
+      Every key generated stays on your device.
+    </p>
+    <p>There are 3 search modes available:</p>
+
+    <div class="step">
+      <div class="step-num">🎲</div>
+      <div class="step-body">
+        <strong>Manual</strong><br>
+        Each click picks a cryptographically random starting point within the selected puzzle's range
+        and tests the next <strong>50,000 private keys sequentially</strong>. One roll at a time — you control the pace.
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">🎰</div>
+      <div class="step-body">
+        <strong>∞ Random</strong><br>
+        Runs an endless loop testing batches of <strong>1,000 completely random keys</strong> per cycle —
+        each key is independently generated via <code>window.crypto</code>. No sequence, pure luck.
+        Runs until you click Stop or the key is found.
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">🔁</div>
+      <div class="step-body">
+        <strong>∞ Sequential</strong><br>
+        Runs an endless loop where each batch picks a <strong>new random starting point</strong> and
+        then tests <strong>N keys sequentially</strong> from there (default 50,000, fully customizable — minimum 50k).
+        Combines the coverage guarantee of sequential search with the unpredictability of a random starting point.
+        Runs until you click Stop or the key is found.
+      </div>
+    </div>
+
+    <hr>
+
+    <!-- DONATION -->
+    <div class="card gold">
+      <span class="badge gold">❤️ Support this project</span>
+      <h2 style="margin-top:0">Like this tool? Send a tip!</h2>
+      <p>
+        This project is open-source and free to use. If you find it useful — or especially if you win —
+        any contribution is deeply appreciated.
+      </p>
+      <div class="address-box">bc1qlzydlvx8s2d2lgumzfxzwnah2paqszm3plrq40</div>
+    </div>
+
+    <div class="disclaimer">
+      Bitcoin Lottery · Open-source · 100% browser-based · No servers · No tracking. The creator assumes NO LIABILITY.
+      Verify everything yourself.
+    </div>
+  </div>
+
+  <script src="/Bitcoin_Lottery/education-lang.js"></script>
+</body>
+
+</html>

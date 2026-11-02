@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://mempool.space; object-src 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Bitcoin Lottery — ¿Qué hacer si encuentro la clave?</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+        :root {
+            --gold: #f59f00;
+            --gold-light: #fcc419;
+            --bg: #0f0e0a;
+            --surface: rgba(255, 255, 255, 0.04);
+            --border: rgba(255, 255, 255, 0.08);
+            --text: rgba(255, 255, 255, 0.87);
+            --muted: rgba(255, 255, 255, 0.45);
+            --mono: 'JetBrains Mono', monospace;
+            --red: #f87171;
+            --green: #86efac;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(ellipse at 50% 0%, rgba(245, 159, 0, 0.06) 0%, transparent 70%);
+            color: var(--text);
+            line-height: 1.7;
+            padding: 2.5rem 1.5rem 5rem;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 760px;
+            margin: 0 auto;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--gold);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 2.5rem;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+
+        .back-link:hover {
+            opacity: 1;
+        }
+
+        h1 {
+            font-size: clamp(1.6rem, 4vw, 2.2rem);
+            font-weight: 700;
+            color: var(--gold-light);
+            margin-bottom: 0.5rem;
+            line-height: 1.2;
+        }
+
+        .subtitle {
+            color: var(--muted);
+            font-size: 1rem;
+            margin-bottom: 2.5rem;
+        }
+
+        h2 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--gold);
+            margin: 2rem 0 0.75rem;
+        }
+
+        p {
+            margin-bottom: 1rem;
+            color: var(--text);
+            font-size: 1rem;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .card.danger {
+            border-color: rgba(248, 113, 113, 0.35);
+            background: rgba(248, 113, 113, 0.06);
+        }
+
+        .card.success {
+            border-color: rgba(134, 239, 172, 0.35);
+            background: rgba(134, 239, 172, 0.06);
+        }
+
+        .card.gold {
+            border-color: rgba(245, 159, 0, 0.4);
+            background: rgba(245, 159, 0, 0.06);
+        }
+
+        .badge {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            padding: 3px 10px;
+            border-radius: 999px;
+            margin-bottom: 0.75rem;
+        }
+
+        .badge.red {
+            background: rgba(248, 113, 113, 0.15);
+            color: var(--red);
+            border: 1px solid rgba(248, 113, 113, 0.3);
+        }
+
+        .badge.green {
+            background: rgba(134, 239, 172, 0.15);
+            color: var(--green);
+            border: 1px solid rgba(134, 239, 172, 0.3);
+        }
+
+        .badge.gold {
+            background: rgba(245, 159, 0, 0.15);
+            color: var(--gold-light);
+            border: 1px solid rgba(245, 159, 0, 0.3);
+        }
+
+        .step {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 1.25rem;
+            align-items: flex-start;
+        }
+
+        .step-num {
+            flex-shrink: 0;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(245, 159, 0, 0.15);
+            border: 1px solid rgba(245, 159, 0, 0.4);
+            color: var(--gold);
+            font-weight: 700;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .step-body {
+            flex: 1;
+            padding-top: 4px;
+        }
+
+        code {
+            font-family: var(--mono);
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            padding: 2px 7px;
+            font-size: 0.88em;
+            color: var(--gold-light);
+            word-break: break-all;
+        }
+
+        .address-box {
+            font-family: var(--mono);
+            font-size: 0.85rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 12px 16px;
+            color: var(--gold-light);
+            word-break: break-all;
+            margin-top: 0.5rem;
+        }
+
+        a {
+            color: var(--gold);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        a:hover {
+            color: var(--gold-light);
+            text-decoration: underline;
+        }
+
+        strong {
+            color: var(--gold-light);
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 2.5rem 0;
+        }
+
+        .footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            font-size: 13px;
+            color: var(--muted);
+            text-align: center;
+        }
+
+        .disclaimer {
+            font-size: 0.85rem;
+            color: var(--muted);
+            margin-top: 3rem;
+            border-top: 1px solid var(--border);
+            padding-top: 1.5rem;
+            opacity: 0.8;
+        }
+
+        /* Lang Switcher */
+
+        .lang-switcher {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            margin-bottom: 2rem;
+        }
+
+        .lang-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 999px;
+            padding: 6px 14px;
+            font-size: 13px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.45);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .lang-btn:hover,
+        .lang-btn.active {
+            background: rgba(245, 159, 0, 0.12);
+            border-color: rgba(245, 159, 0, 0.4);
+            color: var(--gold-light);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="lang-switcher">
+            <button class="lang-btn" type="button" data-lang="en">🇺🇸 EN</button>
+            <button class="lang-btn" type="button" data-lang="pt">🇧🇷 PT</button>
+            <button class="lang-btn active" type="button" data-lang="es">🇪🇸 ES</button>
+        </div>
+
+        <a class="back-link" href="./">← Volver a la Lotería Bitcoin</a>
+
+        <h1>🏆 Encontraste la clave — ¿y ahora qué?</h1>
+        <p class="subtitle">Lee esto con atención antes de hacer cualquier cosa. Un movimiento equivocado puede costarte
+            todo.</p>
+
+        <!-- QUÉ ES EL PUZZLE -->
+        <div class="card gold">
+            <span class="badge gold">🧩 Contexto</span>
+            <h2 style="margin-top:0">¿Qué es el Bitcoin Puzzle?</h2>
+            <p>
+                En 2015, un individuo anónimo envió Bitcoin a <strong>256 direcciones diferentes</strong>, cada una con
+                una clave privada dentro de un rango progresivamente más difícil.
+                Los montos crecen con el número del puzzle — el #1 tiene 0,001 BTC, el #71 tiene 7,1 BTC, y así hasta el
+                #256.
+            </p>
+            <p>
+                El desafío fue diseñado para probar los límites de la búsqueda por fuerza bruta en claves Bitcoin
+                y para recompensar a quien sea suficientemente inteligente (o afortunado) para encontrar la clave
+                privada.
+                Los rangos son públicos, pero el espacio de búsqueda es astronómicamente grande.
+                Solo el puzzle #71 tiene más de <strong>2,3 quintillones de claves posibles</strong>.
+            </p>
+            <p>
+                Los puzzles de números bajos ya fueron resueltos. Los más altos siguen abiertos.
+                Todos los fondos están intactos en la blockchain, esperando a quien encuentre la clave primero.
+            </p>
+            <p style="margin-bottom:0">
+                📖 Lista completa de puzzles y estado:
+                <a href="https://privatekeys.pw/puzzles/bitcoin-puzzle-tx" target="_blank" rel="noreferrer">
+                    privatekeys.pw/puzzles/bitcoin-puzzle-tx
+                </a>
+            </p>
+        </div>
+
+        <!-- AVISO PRINCIPAL -->
+        <div class="card danger">
+            <span class="badge red">⚠️ Atención</span>
+            <h2 style="margin-top:0">Reclamar NO es tan simple como enviar una transacción</h2>
+            <p>
+                En el momento en que transmites una transacción desde la dirección del puzzle, expones la <strong>clave
+                    pública</strong>
+                a toda la red. Bots automatizados monitorean el mempool las 24 horas los 7 días buscando exactamente
+                esto.
+                Pueden enviar una transacción competidora con tarifas más altas, robando tus Bitcoin antes de que la
+                tuya confirme.
+            </p>
+            <p>
+                <strong>Deshabilitar RBF (Replace-By-Fee) NO te protege.</strong>
+                Los bots aún pueden usar otras estrategias de aumento de tarifa. La exposición de la clave pública es la
+                vulnerabilidad real.
+            </p>
+        </div>
+
+        <!-- CANGURO -->
+        <h2>🦘 ¿Por qué la clave pública es un problema?</h2>
+        <p>
+            Las direcciones de los puzzles Bitcoin fueron generadas desde rangos de clave privada conocidos.
+            Investigadores y bots
+            ya han computado las <strong>claves públicas</strong> de muchas de estas direcciones usando algoritmos como
+            el
+            <a href="https://github.com/demining/Kangaroo-by-JeanLucPons" target="_blank" rel="noopener noreferrer">Canguro de
+                Pollard</a>.
+            Una vez que tu transacción entra al mempool, conocen la clave pública y pueden crear una transacción
+            conflictiva más rápido que la tuya confirme.
+        </p>
+        <p>
+            🧬 ¿Quieres ver en la práctica cómo una Clave Privada se convierte en Clave Pública, Hash160 y Dirección? Explora el laboratorio interactivo
+            <a href="./key-anatomy.html">Anatomía de la Clave Bitcoin →</a>
+        </p>
+
+        <hr>
+
+        <!-- MÉTODO SEGURO MARA -->
+        <div class="card success">
+            <span class="badge green">✅ Método Recomendado</span>
+            <h2 style="margin-top:0">Retiro seguro vía MARA Slipstream</h2>
+            <p>
+                <a href="https://slipstream.mara.com/" target="_blank" rel="noreferrer">MARA Slipstream</a> es un
+                servicio privado
+                de envío de transacciones de Marathon Digital Holdings, una de las mayores mineras de Bitcoin del mundo.
+                Al enviar tu transacción por Slipstream, <strong>nunca se transmite al mempool público</strong>.
+                MARA mina el bloque con tu transacción de forma silenciosa — tu clave pública solo se revela
+                <em>después</em> de que el bloque confirme.
+                Para ese momento, ya es demasiado tarde para que los bots actúen.
+            </p>
+        </div>
+
+        <h2>📋 Paso a paso: cómo reclamar con seguridad</h2>
+
+        <div class="step">
+            <div class="step-num">1</div>
+            <div class="step-body">
+                <strong>NO transmitas nada todavía.</strong><br>
+                Cierra cualquier billetera que pueda transmitir automáticamente. No importes la clave privada en una
+                billetera estándar conectada a internet.
+            </div>
+        </div>
+        <div class="step">
+            <div class="step-num">2</div>
+            <div class="step-body">
+                <strong>Usa el Constructor de Transacciones integrado.</strong><br>
+                Cuando encuentres la clave, aparecerá automáticamente un botón verde <em>"⚡ Build Transaction for MARA
+                    Slipstream"</em>
+                en la pantalla de éxito. Haz clic en él para abrir el Constructor de Transacciones — ya vendrá con tu
+                clave privada.
+                La herramienta busca tus fondos (UTXOs) automáticamente en <a href="https://mempool.space"
+                    target="_blank" rel="noreferrer">mempool.space</a>
+                y firma la transacción <strong>100% en tu navegador</strong> — sin servidor, ninguna clave sale de tu
+                dispositivo.
+                NO necesitas Electrum ni ninguna otra billetera.
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-num">3</div>
+            <div class="step-body">
+                <strong>Define una tarifa minera (fee) competitiva.</strong><br>
+                El constructor busca automáticamente las tarifas actuales de mempool.space y calcula el
+                <strong>mínimo MARA Slipstream</strong> para ti: <code>máximo(2 × tarifa prioridad, 2 sat/vByte)</code>.
+                Se muestran tres opciones (presets) — Normal ⛏ (mínimo MARA), Priority ⚡ (2×) y Fast 🚀 (3×).
+                Elige al menos el mínimo de MARA para garantizar que se incluya tu transacción.
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-num">4</div>
+            <div class="step-body">
+                <strong>Copia el Payload y envíalo en MARA Slipstream.</strong><br>
+                El TxBuilder NO enviará la transacción automáticamente para evitar bloqueos por CORS nativos del
+                navegador. En su lugar,
+                generará el código HEX limpio firmado. Haz clic en el botón <em>"Copy"</em> o usa el enlace para abrir
+                el portal oficial <a href="https://slipstream.mara.com/" target="_blank" rel="noreferrer">Slipstream
+                    MARA</a>
+                en una nueva pestaña. Pega el código allí y haz clic en Submit.
+            </div>
+        </div>
+
+        <div class="step">
+            <div class="step-num">5</div>
+            <div class="step-body">
+                <strong>Mueva sus fondos a una billetera fría.</strong><br>
+                MARA te avisará el estado del bloque directamente en la web de Slipstream. Luego de la primera
+                confirmación en la blockchain,
+                envíe urgentemente los BTC desde la cuenta intermedia a su billetera fría definitiva (Hardware wallet).
+                A partir de aquí, cualquier transacción normal es 100% segura.
+            </div>
+        </div>
+
+        <div class="card gold">
+            <span class="badge gold">💡 Cómo se autocalcula la tarifa</span>
+            <p style="margin:0">
+                El Constructor de Transacciones obtiene <code>mempool.space/api/v1/fees/recommended</code> al cargar.
+                El mínimo documentado por MARA es <strong>el mayor entre 2× la tarifa prioritaria actual y 2
+                    sat/vByte</strong>.
+                El constructor usa esta fórmula para bloquear la tarifa exacta en sats y construye la Raw Transaction
+                con la precisión exigida por pools institucionales. (Nunca baje esta tarifa en el input, solo súbala si
+                desea competir en momentos pico de congestión).
+            </p>
+        </div>
+
+        <hr>
+
+        <!-- CÓMO FUNCIONA -->
+        <h2>🔍 ¿Cómo funciona esta lotería?</h2>
+        <p>
+            Esta app corre <strong>100% en tu navegador</strong> — sin servidor, sin llamadas API, sin datos
+            transmitidos.
+            Cada clave generada se queda en tu dispositivo.
+        </p>
+        <p>Existen 3 modos de búsqueda disponibles:</p>
+
+        <div class="step">
+            <div class="step-num">🎲</div>
+            <div class="step-body">
+                <strong>Manual</strong><br>
+                Cada clic elige un punto de inicio aleatorio dentro del rango del puzzle y prueba las siguientes
+                <strong>50.000 claves privadas secuencialmente</strong>. Un roll a la vez — tú controlas el ritmo.
+            </div>
+        </div>
+        <div class="step">
+            <div class="step-num">🎰</div>
+            <div class="step-body">
+                <strong>∞ Aleatorio</strong><br>
+                Ejecuta un bucle interminable probando lotes de <strong>1.000 claves completamente aleatorias</strong>
+                por ciclo —
+                cada clave es generada de forma independiente vía <code>window.crypto</code>. Sin secuencia, pura
+                suerte.
+                Corre hasta que hagas clic en Detener o se encuentre la clave.
+            </div>
+        </div>
+        <div class="step">
+            <div class="step-num">🔁</div>
+            <div class="step-body">
+                <strong>∞ Secuencial</strong><br>
+                Ejecuta un bucle interminable donde cada lote elige un <strong>nuevo punto de inicio aleatorio</strong>
+                y luego prueba <strong>N claves secuencialmente</strong> desde allí (por defecto 50.000, personalizable
+                — mínimo 50k).
+                Combina la cobertura garantizada de la búsqueda secuencial con la imprevisibilidad de un inicio
+                aleatorio.
+            </div>
+        </div>
+
+        <hr>
+
+        <!-- DONACIÓN -->
+        <div class="card gold">
+            <span class="badge gold">❤️ Apoya este proyecto</span>
+            <h2 style="margin-top:0">¿Te gustó la herramienta? ¡Manda un cafecito!</h2>
+            <p>
+                Este proyecto es open-source y gratuito. Si te resultó útil — o especialmente si ganas —
+                cualquier contribución es muy bienvenida y apreciada.
+            </p>
+            <div class="address-box">bc1qlzydlvx8s2d2lgumzfxzwnah2paqszm3plrq40</div>
+        </div>
+
+        <div class="disclaimer">
+            Bitcoin Lottery · Open-source · 100% en el navegador · Sin servidores · Sin rastreo. El creador no asume
+            NINGUNA RESPONSABILIDAD. Verifica todo por ti mismo.
+        </div>
+    </div>
+
+  <script src="/Bitcoin_Lottery/education-lang.js"></script>
+</body>
+
+</html>
