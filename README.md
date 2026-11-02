@@ -50,6 +50,10 @@ Uma loteria de código aberto que tenta resolver os [Bitcoin Puzzles](https://pr
 | `npm start` | Build + preview → [localhost:4173/](http://localhost:4173/) |
 | `npm run build` | Apenas gera o bundle em `dist/` |
 
+**Site oficial:** [btc-lottery.pages.dev](https://btc-lottery.pages.dev/) (Cloudflare Pages).
+
+Para hospedar sua própria cópia no Cloudflare Pages: conecte o repositório, use `npm run build` como comando de build e `dist` como pasta de saída. O Cloudflare define `CF_PAGES=1` e o Vite passa a servir da raiz `/`. No GitHub Pages o base path vira `/<nome-do-repo>/` automaticamente; para outro caminho use `VITE_BASE=/caminho/ npm run build`.
+
 ---
 
 ## ⚙️ Modos de Busca da Loteria
