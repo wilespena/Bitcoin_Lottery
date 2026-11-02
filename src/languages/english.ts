@@ -7,15 +7,22 @@ export default {
   "puzzle-state-success-title": "YOU FOUND THE KEEY!!!!",
   "puzzle-state-sucess-content": (keyHex: string, wif: string) =>
     `You found the key ${keyHex}, this is the WIF: ${wif}`,
-  "puzzle-info":
-    'The difficulty grows with the puzzle number — <strong>#71 starts with ~2.3 quintillion possible keys</strong> and reaches <strong>~18.4 quintillion on #74</strong>. Pure luck, but someone will find it.',
+  puzzleInfoParts: {
+    before71: "The difficulty grows with the puzzle number — ",
+    bold71: "#71 starts with ~2.3 quintillion possible keys",
+    middle: " and reaches ",
+    bold74: "~18.4 quintillion on #74",
+    after: ". Pure luck, but someone will find it.",
+  },
   "btn-education": "📖 What is the puzzle and precautions →",
+  "btn-anatomy": "🧬 Bitcoin Key Anatomy (Interactive) →",
   "btn-txb": "⚡ Build Tx for MARA Slipstream →",
   footer: "Bitcoin Lottery · Open-source · 100% browser-based · No servers · No tracking",
   txb: {
     back: "← Back",
     title: "Transaction Builder",
-    subtitle: "Build a signed raw transaction to broadcast privately via MARA Slipstream — without exposing your key to the public mempool.",
+    subtitle:
+      "Build a signed raw transaction to broadcast privately via MARA Slipstream — without exposing your key to the public mempool.",
     step1: "Private Key",
     step1Hint: "Paste the WIF or HEX private key you found in the lottery.",
     step1Input: "WIF (5... / K... / L...) or HEX (64 chars)",
@@ -35,7 +42,9 @@ export default {
     sendToLabel: "Send to",
     sendToPlaceholder: "bc1q... or 1... or 3...",
     step3: "Transaction Fee",
-    step3Hint: "MARA Slipstream minimum = <strong>2× current priority fee or 2 sat/vB</strong>, whichever is higher.",
+    step3HintPrefix: "MARA Slipstream minimum = ",
+    step3HintBold: "2× current priority fee or 2 sat/vB",
+    step3HintSuffix: ", whichever is higher.",
     customFeeLabel: "Custom fee rate (sat/vB)",
     maraMinReq: "Min: {0} sat/vB (MARA Slipstream requirement)",
     feeMin: "Normal ⛏",
@@ -54,24 +63,39 @@ export default {
     errVout: "Enter a valid VOUT (≥ 0).",
     errAmount: "Enter a valid UTXO amount in sats (≥ 0).",
     errSendAmount: "Enter a valid amount to send (BTC).",
-    errDest: "Enter a destination address.",
+    errDest: "Enter a valid destination Bitcoin address.",
     errAmountTooLow: "Send amount is too low.",
-    errInsufficient: "Insufficient funds. UTXO amount ({0} sats) cannot cover send amount ({1} sats) + fee ({2} sats). Change would be {3} sats.",
+    errAmountMismatch:
+      "UTXO total was changed and no longer matches the value fetched from mempool.space. Re-select the UTXO.",
+    errFeeTooHigh:
+      "Fee of {0} sats looks wrong (above {1} sat/vB or more than 10% of the input). Lower the fee rate to avoid losing funds to miners.",
+    utxoTotalLockedTitle:
+      "Locked to the value fetched from mempool.space. Any other value would be paid to miners as fee.",
+    errInsufficient:
+      "Insufficient funds. UTXO amount ({0} sats) cannot cover send amount ({1} sats) + fee ({2} sats). Change would be {3} sats.",
     outputTitle: "✅ Signed Raw Transaction (Hex)",
     copy: "Copy",
     copied: "✓ Copied!",
     nextStepsTitle: "Next Steps:",
-    stepCopy: "Click <strong>Copy</strong> to save your Raw Transaction HEX.",
-    stepOpen: "Click the button below to open <strong>MARA Slipstream</strong>.",
-    stepPaste: "Paste your hex into their form and click <strong>Submit</strong>!",
+    stepCopyPrefix: "Click ",
+    stepCopyBold: "Copy",
+    stepCopySuffix: " to save your Raw Transaction HEX.",
+    stepOpenPrefix: "Click the button below to open ",
+    stepOpenBold: "MARA Slipstream",
+    stepOpenSuffix: ".",
+    stepPastePrefix: "Paste your hex into their form and click ",
+    stepPasteBold: "Submit",
+    stepPasteSuffix: "!",
     openMaraBtn: "⛏ Open Website to submit manually →",
     deriveErrorInvalid: "Invalid private key: ",
     deriveLabelAddr: "Derived address",
     deriveLabelPub: "Public key",
     deriveNote: "✅ Confirm this matches the puzzle address you found the key for.",
     utxoHintEnterKey: "Enter your private key above to auto-load the UTXO.",
-    utxoErrNoBalance: "No UTXOs found — this address has no unspent balance. Double-check the private key.",
-    utxoErrNetwork: "Could not fetch UTXOs from mempool.space — check your internet connection.",
+    utxoErrNoBalance:
+      "No UTXOs found — this address has no unspent balance. Double-check the private key.",
+    utxoErrNetwork:
+      "Could not fetch UTXOs from mempool.space — check your internet connection.",
     checkMempool: "Check on mempool.space",
     utxoListSelect: "Select which UTXO to spend",
     utxoConfirmed: "✅ Confirmed (block {0})",
@@ -80,9 +104,65 @@ export default {
     utxoAutoWait: "⏳ Unconfirmed — wait for confirmation before spending",
     utxoTotalBtcLabel: "UTXO Total (BTC)",
     utxoTotalBtcTitle: "The total value of the unspent output you are claiming",
-    destHint: "A fresh wallet address you control. Use a cold wallet — NOT an exchange address.",
-    feeNote: "A P2PKH 1-in 1-out tx is ~{0} bytes.",
+    destHint:
+      "A fresh wallet address you control. Use a cold wallet — NOT an exchange address.",
+    feeNote: "A P2PKH tx is ~{0} bytes.",
     errUnknown: "Unknown error building transaction.",
-    satoshis: "satoshis"
-  }
+    satoshis: "satoshis",
+  },
+  anatomy: {
+    back: "← Back to Bitcoin Lottery",
+    title: "Bitcoin Key Anatomy",
+    subtitle:
+      "Discover the mathematical journey from a random 256-bit number to a public Bitcoin address. Edit any stage below and watch how one-way cryptography and reversible encodings behave in real time.",
+    presetsLabel: "Didactic Examples:",
+    presetKey1: "Key #1 (Genesis Test)",
+    presetKey2: "Key #2",
+    presetPuzzle20: "Puzzle #20 (Solved)",
+    presetPuzzle71Addr: "Puzzle #71 (Address Only)",
+    presetRandom: "🎲 Random 256-bit Key",
+    privTitle: "1. Private Key (Hexadecimal — 256 bits)",
+    privDesc:
+      "Your fundamental secret: a 256-bit integer between 1 and n − 1 on the SECP256k1 curve. Reversible with WIF.",
+    privPlaceholder: "Enter 1 to 64 hex characters...",
+    wifTitle: "2. Wallet Import Format (WIF)",
+    wifDesc:
+      "Base58Check encoding of the private key (prefix 0x80 + 32-byte key + 0x01 compressed flag + 4-byte checksum). Reversible: editing WIF recovers the exact hex private key.",
+    wifPlaceholder: "Enter WIF key (K..., L..., or 5...)...",
+    curveTitle: "SECP256k1 Elliptic Curve",
+    curveFormula: "y² = x³ + 7 (mod p)",
+    curveCalculating: "calculating P = k × G...",
+    curvePointLabel: "P = k × G (Public Key)",
+    curveGeneratorLabel: "G (Generator)",
+    pubTitle: "3. Public Key (Compressed — 33 bytes)",
+    pubDesc:
+      "Derived via Elliptic Curve scalar multiplication (P = k × G). This is a cryptographic trapdoor: easy to compute from k, but mathematically infeasible to reverse (ECDLP).",
+    pubPlaceholder: "66 hex chars starting with 02 or 03...",
+    shaTitle: "4. SHA-256 Hash (32 bytes)",
+    shaDesc:
+      "First one-way hash applied to the compressed public key bytes. Protects the public key from being exposed on-chain until funds are spent.",
+    shaPlaceholder: "64 hex characters...",
+    hash160Title: "5. RIPEMD-160 / Hash160 (20 bytes)",
+    hash160Desc:
+      "The SHA-256 digest is hashed with RIPEMD-160 to produce a compact 160-bit fingerprint. Reversible with the final Legacy address via Base58Check!",
+    hash160Placeholder: "40 hex characters...",
+    addrTitle: "6. Final Bitcoin Address (Legacy P2PKH)",
+    addrDesc:
+      "Base58Check encoding of version byte 0x00 + Hash160 + 4-byte Double-SHA256 checksum. Decoding an address reveals its Hash160, but NEVER its Public Key or Private Key!",
+    addrPlaceholder: "Enter Legacy Bitcoin address (1...)...",
+    irreversibleMath: "? (Irreversible: protected by SECP256k1 discrete logarithm)",
+    irreversibleHash: "? (Irreversible: protected by one-way cryptographic hash)",
+    invalidInput: "Invalid format for the selected stage. Check the length and characters.",
+    mempoolBalance: "Mempool On-Chain Balance:",
+    fetchingBalance: "Fetching...",
+    balanceError: "Offline / Unable to fetch balance",
+    balanceCheckBtn: "Check balance",
+    balanceNotice:
+      "Checking sends this ADDRESS (never the key) to mempool.space. Do not check real wallets you want to keep private.",
+    securityCalloutTitle: "🛡️ Why does this matter for the Bitcoin Puzzles?",
+    securityCalloutBody:
+      "Notice that when you paste Puzzle #71's address (1PWo3JeB...), you can immediately decode its Hash160 (Step 5), but Step 3 (Public Key) remains hidden behind RIPEMD-160 and SHA-256! The moment you broadcast a transaction to the public mempool, your signature reveals Step 3 (Public Key), allowing Pollard's Kangaroo bots to attack the reduced range. That is why you must use MARA Slipstream to claim puzzle rewards privately.",
+    footer:
+      "Bitcoin Lottery · Key Anatomy Lab · 100% browser-based · No servers · No tracking",
+  },
 };

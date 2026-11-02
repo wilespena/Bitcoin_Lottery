@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="referrer" content="no-referrer" />
   <title>Bitcoin Lottery — O que fazer se encontrar a chave?</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
@@ -251,9 +252,9 @@
 <body>
   <div class="container">
     <div class="lang-switcher">
-      <button class="lang-btn" onclick="switchLang('en')">🇺🇸 EN</button>
-      <button class="lang-btn active" onclick="switchLang('pt')">🇧🇷 PT</button>
-      <button class="lang-btn" onclick="switchLang('es')">🇪🇸 ES</button>
+      <button class="lang-btn" type="button" data-lang="en">🇺🇸 EN</button>
+      <button class="lang-btn active" type="button" data-lang="pt">🇧🇷 PT</button>
+      <button class="lang-btn" type="button" data-lang="es">🇪🇸 ES</button>
     </div>
 
     <a class="back-link" href="./">← Voltar para a Loteria Bitcoin</a>
@@ -316,10 +317,14 @@
       Os endereços dos puzzles Bitcoin foram gerados a partir de intervalos de chave privada conhecidos. Pesquisadores e
       bots
       já computaram as <strong>chaves públicas</strong> de muitos desses endereços usando algoritmos como o
-      <a href="https://github.com/demining/Kangaroo-by-JeanLucPons" target="_blank" rel="noreferrer">Canguru de
+      <a href="https://github.com/demining/Kangaroo-by-JeanLucPons" target="_blank" rel="noopener noreferrer">Canguru de
         Pollard</a>.
       Assim que sua transação entra na mempool, eles conhecem a chave pública e podem criar uma transação conflitante
       mais rápido que a sua confirma.
+    </p>
+    <p>
+      🧬 Quer ver na prática como uma Chave Privada vira Chave Pública, Hash160 e Endereço? Acesse o laboratório interativo
+      <a href="./key-anatomy.html">Anatomia da Chave Bitcoin →</a>
     </p>
 
     <hr>
@@ -470,14 +475,7 @@
     </div>
   </div>
 
-  <script>
-    function switchLang(lang) {
-      localStorage.setItem("app_lang", lang);
-      if (lang === "en") window.location.href = "education.html";
-      else if (lang === "pt") window.location.href = "education-pt.html";
-      else if (lang === "es") window.location.href = "education-es.html";
-    }
-  </script>
+  <script src="/education-lang.js"></script>
 </body>
 
 </html>

@@ -2,7 +2,9 @@
 
 Uma loteria de código aberto que tenta resolver os [Bitcoin Puzzles](https://privatekeys.pw/puzzles/bitcoin-puzzle-tx), varrendo o espaço de chaves privadas em busca do endereço alvo e sua recompensa.
 
-> **100% no navegador e seguro** — nenhuma chave ou dado é enviado a servidores de terceiros. Todo o processamento usa a CPU do seu dispositivo.
+> **100% no navegador** — toda a geração de chaves, derivação de endereços e assinatura de transações acontece localmente, na CPU do seu dispositivo. Nenhuma chave privada sai do navegador.
+>
+> **O que sai do navegador:** apenas *endereços* Bitcoin (nunca chaves), enviados à API pública do [mempool.space](https://mempool.space) para consultar saldo, UTXOs e taxas. No TxBuilder isso acontece automaticamente ao digitar a chave; no Key Anatomy só quando você clica em "Consultar saldo". Não há backend, banco de dados, analytics ou rastreamento.
 
 ---
 
@@ -10,8 +12,9 @@ Uma loteria de código aberto que tenta resolver os [Bitcoin Puzzles](https://pr
 - **UI Moderna (Glassmorphism):** Design refinado com drop-blur, dark-mode nativo e componentes estilizados para melhor visibilidade em longa bateria de testes.
 - **Saldo ao Vivo (Live Balance):** O App se conecta à API da `mempool.space` e mostra quantos BTC existem no exato momento na carteira do puzzle. Ignorando automaticamente puzzles já resolvidos (0 SATS).
 - **Custom Wallet Search (Busca Customizada):** Adicionado suporte para você inserir *qualquer address* Bitcoin e definir o range hex manualmente para realizar as buscas.
+- **Anatomia da Chave Bitcoin (`key-anatomy.html`):** Laboratório criptográfico interativo que demonstra em tempo real o pipeline completo (`Private Key Hex` ↔ `WIF` → `Curva Elíptica SECP256k1` → `Public Key` → `SHA-256` → `RIPEMD-160 / Hash160` ↔ `Endereço Legacy Base58Check`), explicando visualmente o que é reversível e por que a Chave Pública fica protegida até o momento do gasto.
 - **TxBuilder In-Browser:** Se você achar a chave, o app possui um `TxBuilder` robusto e nativo capaz de gerar uma transação RAW.
-- **Integração MARA Slipstream:** Transmita suas moedas direto para as piscinas de mineração da MARA, evitando robôs ladrões de mempool pública, usando o auto-submit + tracker da API oficial (Slipstream).
+- **Integração MARA Slipstream:** O TxBuilder gera o HEX assinado e você mesmo o envia no portal oficial do Slipstream (MARA), evitando robôs de mempool pública. O app não envia nada à MARA por você.
 
 ---
 
@@ -79,5 +82,17 @@ Se você der a sorte grande e a interface estourar o modal de **SUCCESS**:
 Interface construída via arrays em **Inglês**, **Português**, e **Espanhol**.
 
 ---
+## 🔒 Segurança (leia antes de usar com fundos reais)
+
+- **Chaves nunca vão para a URL, cookies ou localStorage.** A passagem da chave encontrada para o TxBuilder usa `sessionStorage` na mesma aba e é apagada imediatamente ao carregar.
+- **Valor do UTXO travado:** o campo "UTXO total" fica somente leitura após a consulta ao mempool.space. No Bitcoin, `entrada − saídas = taxa do minerador`; um valor digitado errado viraria taxa.
+- **Teto de taxa:** o builder recusa taxas acima de 2000 sat/vB, acima de 10% da entrada ou acima de 0,005 BTC.
+- **Content-Security-Policy** no build: scripts só da própria origem e conexões só para `mempool.space`.
+- **Confira sempre** o HEX gerado em um decodificador independente antes de enviar. O valor do UTXO vem de uma única API pública; verifique no explorador antes de assinar.
+- Rode a partir de um build local (`npm run build`) ou da sua própria hospedagem. Não cole chaves em cópias do site hospedadas por terceiros.
+
+Encontrou uma falha? Abra uma issue sem incluir chaves privadas.
+
+---
 ## 📜 Licença
-MIT
+MIT — veja o arquivo [LICENSE](LICENSE).

@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="referrer" content="no-referrer" />
   <title>Bitcoin Lottery — What to do if I find the key?</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
@@ -256,9 +257,9 @@
 <body>
   <div class="container">
     <div class="lang-switcher">
-      <button class="lang-btn active" onclick="switchLang('en')">🇺🇸 EN</button>
-      <button class="lang-btn" onclick="switchLang('pt')">🇧🇷 PT</button>
-      <button class="lang-btn" onclick="switchLang('es')">🇪🇸 ES</button>
+      <button class="lang-btn active" type="button" data-lang="en">🇺🇸 EN</button>
+      <button class="lang-btn" type="button" data-lang="pt">🇧🇷 PT</button>
+      <button class="lang-btn" type="button" data-lang="es">🇪🇸 ES</button>
     </div>
 
     <a class="back-link" href="./">← Back to Bitcoin Lottery</a>
@@ -318,10 +319,14 @@
     <p>
       Bitcoin puzzle addresses are generated from a known private key range. Researchers and bots have already computed
       the <strong>public keys</strong> for many of these addresses using algorithms like
-      <a href="https://github.com/demining/Kangaroo-by-JeanLucPons" target="_blank" rel="noreferrer">Pollard's
+      <a href="https://github.com/demining/Kangaroo-by-JeanLucPons" target="_blank" rel="noopener noreferrer">Pollard's
         Kangaroo</a>.
       Once your transaction hits the mempool, they know the public key and can craft a conflicting transaction faster
       than yours confirms.
+    </p>
+    <p>
+      🧬 Want to see how a Private Key becomes a Public Key, Hash160, and Address? Explore the interactive
+      <a href="./key-anatomy.html">Bitcoin Key Anatomy Lab →</a>
     </p>
 
     <hr>
@@ -466,14 +471,7 @@
     </div>
   </div>
 
-  <script>
-    function switchLang(lang) {
-      localStorage.setItem("app_lang", lang);
-      if (lang === "en") window.location.href = "education.html";
-      else if (lang === "pt") window.location.href = "education-pt.html";
-      else if (lang === "es") window.location.href = "education-es.html";
-    }
-  </script>
+  <script src="/education-lang.js"></script>
 </body>
 
 </html>

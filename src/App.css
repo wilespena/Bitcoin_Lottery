@@ -1833,3 +1833,298 @@
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
+
+
+/* ═══════════════════════════════════════════════
+   KEY ANATOMY PAGE (Unified Bitcoin_Education)
+   ═══════════════════════════════════════════════ */
+
+.anatomy-presets-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(245, 159, 0, 0.18);
+  border-radius: 14px;
+  padding: 12px 16px;
+  margin-bottom: 1.5rem;
+}
+
+.anatomy-presets-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+}
+
+.anatomy-presets-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+}
+
+.anatomy-preset-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.anatomy-preset-btn:hover {
+  background: rgba(245, 159, 0, 0.15);
+  border-color: rgba(245, 159, 0, 0.5);
+  color: var(--gold-light);
+  transform: translateY(-1px);
+}
+
+.anatomy-preset-btn.highlight {
+  border-color: rgba(245, 159, 0, 0.4);
+  background: rgba(245, 159, 0, 0.09);
+  color: var(--gold-light);
+}
+
+.anatomy-pipeline {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+
+.anatomy-step-card {
+  background: rgba(30, 41, 59, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  padding: 16px 18px;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+
+.anatomy-step-card.active {
+  border-color: rgba(245, 159, 0, 0.5);
+  background: rgba(245, 159, 0, 0.05);
+  box-shadow: 0 0 18px rgba(245, 159, 0, 0.1);
+}
+
+.anatomy-step-card.final-address {
+  border-color: rgba(245, 159, 0, 0.45);
+}
+
+.anatomy-step-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.anatomy-step-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--gold-light);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.anatomy-step-desc {
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.65);
+  margin: 0 0 10px;
+  line-height: 1.5;
+}
+
+.anatomy-hex-input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(245, 159, 0, 0.3);
+  border-radius: 10px;
+  padding: 11px 14px;
+  color: var(--gold-light);
+  font-family: var(--mono);
+  font-size: 13px;
+  outline: none;
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+
+.anatomy-hex-input:focus {
+  border-color: rgba(245, 159, 0, 0.85);
+  box-shadow: 0 0 14px rgba(245, 159, 0, 0.2);
+}
+
+.anatomy-hex-input.irreversible {
+  color: rgba(255, 255, 255, 0.42);
+  border-color: rgba(255, 255, 255, 0.08);
+  font-style: italic;
+}
+
+.anatomy-hex-input.address-highlight {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffd43b;
+  background: rgba(245, 159, 0, 0.09);
+}
+
+.anatomy-calc-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--gold);
+  margin: 2px 0;
+  font-size: 14px;
+}
+
+.anatomy-calc-box code {
+  background: rgba(245, 159, 0, 0.1);
+  border: 1px dashed rgba(245, 159, 0, 0.35);
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--gold-light);
+  text-align: center;
+}
+
+.anatomy-math-lines {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.anatomy-canvas-container {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #050505;
+  border-radius: 14px;
+  border: 1px solid rgba(245, 159, 0, 0.28);
+  overflow: hidden;
+  position: relative;
+  margin: 4px 0;
+}
+
+.anatomy-canvas-overlay {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(0, 0, 0, 0.75);
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  pointer-events: none;
+  text-align: left;
+}
+
+.anatomy-canvas-title {
+  font-size: 12px;
+  color: var(--gold);
+  font-weight: 700;
+  margin: 0 0 2px 0;
+}
+
+.anatomy-canvas-text {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.anatomy-canvas-pk {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: #ffd43b;
+  margin: 4px 0 0 0;
+}
+
+.anatomy-balance-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-top: 10px;
+  font-family: var(--mono);
+  font-size: 13px;
+}
+
+.anatomy-balance-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.anatomy-balance-fetching {
+  color: #ffd43b;
+  animation: pulse 1s infinite;
+}
+
+.anatomy-balance-value {
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.anatomy-balance-value.has-funds {
+  color: #86efac;
+}
+
+.anatomy-balance-btn {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f0e0a;
+  background: #f59f00;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.anatomy-balance-btn:hover:not(:disabled) {
+  background: #fcc419;
+}
+
+.anatomy-balance-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.anatomy-balance-notice {
+  margin: 6px 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+.anatomy-security-callout {
+  margin-top: 2rem;
+  background: rgba(245, 159, 0, 0.06);
+  border: 1px solid rgba(245, 159, 0, 0.35);
+  border-radius: 16px;
+  padding: 1.5rem;
+  text-align: left;
+}
+
+.anatomy-security-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--gold-light);
+  margin: 0 0 0.6rem 0;
+}
+
+.anatomy-security-body {
+  font-size: 13.5px;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.65;
+  margin: 0 0 1.25rem 0;
+}

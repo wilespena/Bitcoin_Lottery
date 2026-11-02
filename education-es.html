@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="no-referrer" />
     <title>Bitcoin Lottery — ¿Qué hacer si encuentro la clave?</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
@@ -261,9 +262,9 @@
 
     <div class="container">
         <div class="lang-switcher">
-            <button class="lang-btn" onclick="switchLang('en')">🇺🇸 EN</button>
-            <button class="lang-btn" onclick="switchLang('pt')">🇧🇷 PT</button>
-            <button class="lang-btn active" onclick="switchLang('es')">🇪🇸 ES</button>
+            <button class="lang-btn" type="button" data-lang="en">🇺🇸 EN</button>
+            <button class="lang-btn" type="button" data-lang="pt">🇧🇷 PT</button>
+            <button class="lang-btn active" type="button" data-lang="es">🇪🇸 ES</button>
         </div>
 
         <a class="back-link" href="./">← Volver a la Lotería Bitcoin</a>
@@ -327,10 +328,14 @@
             Investigadores y bots
             ya han computado las <strong>claves públicas</strong> de muchas de estas direcciones usando algoritmos como
             el
-            <a href="https://github.com/demining/Kangaroo-by-JeanLucPons" target="_blank" rel="noreferrer">Canguro de
+            <a href="https://github.com/demining/Kangaroo-by-JeanLucPons" target="_blank" rel="noopener noreferrer">Canguro de
                 Pollard</a>.
             Una vez que tu transacción entra al mempool, conocen la clave pública y pueden crear una transacción
             conflictiva más rápido que la tuya confirme.
+        </p>
+        <p>
+            🧬 ¿Quieres ver en la práctica cómo una Clave Privada se convierte en Clave Pública, Hash160 y Dirección? Explora el laboratorio interactivo
+            <a href="./key-anatomy.html">Anatomía de la Clave Bitcoin →</a>
         </p>
 
         <hr>
@@ -484,14 +489,7 @@
         </div>
     </div>
 
-    <script>
-        function switchLang(lang) {
-            localStorage.setItem("app_lang", lang);
-            if (lang === "en") window.location.href = "education.html";
-            else if (lang === "pt") window.location.href = "education-pt.html";
-            else if (lang === "es") window.location.href = "education-es.html";
-        }
-    </script>
+  <script src="/education-lang.js"></script>
 </body>
 
 </html>

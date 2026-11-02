@@ -7,15 +7,23 @@ export default {
   "puzzle-state-success-title": "ACHOU A CHAAVE!!!!",
   "puzzle-state-sucess-content": (keyHex: string, wif: string) =>
     `Voce encontrou a chave privada: ${keyHex}, aqui ta a WIF: ${wif}`,
-  "puzzle-info":
-    'A dificuldade cresce com o número do puzzle — <strong>o #71 começa com ~2,3 quintilhões de chaves possíveis</strong> e chega a <strong>~18,4 quintilhões no #74</strong>. Pura sorte, mas alguém vai encontrar.',
+  puzzleInfoParts: {
+    before71: "A dificuldade cresce com o número do puzzle — ",
+    bold71: "o #71 começa com ~2,3 quintilhões de chaves possíveis",
+    middle: " e chega a ",
+    bold74: "~18,4 quintilhões no #74",
+    after: ". Pura sorte, mas alguém vai encontrar.",
+  },
   "btn-education": "📖 O que é o puzzle e precauções →",
+  "btn-anatomy": "🧬 Anatomia da Chave Bitcoin (Interativo) →",
   "btn-txb": "⚡ Construir Tx para MARA Slipstream →",
-  footer: "Loteria Bitcoin · Código Aberto · 100% no navegador · Sem servidores · Sem rastreamento",
+  footer:
+    "Loteria Bitcoin · Código Aberto · 100% no navegador · Sem servidores · Sem rastreamento",
   txb: {
     back: "← Voltar",
     title: "Construtor de Transação Bruta",
-    subtitle: "Crie uma transação crua assinada para transmitir de forma privada via MARA Slipstream, sem expor sua chave à mempool pública.",
+    subtitle:
+      "Crie uma transação crua assinada para transmitir de forma privada via MARA Slipstream, sem expor sua chave à mempool pública.",
     step1: "Chave Privada",
     step1Hint: "Cole a chave privada (WIF ou HEX) que você encontrou na loteria.",
     step1Input: "WIF (5... / K... / L...) ou HEX (64 caracteres)",
@@ -31,11 +39,14 @@ export default {
     amountLabel: "Valor (sats)",
     amountBtcLabel: "Enviar (BTC)",
     amountBtcPlaceholder: "Quantidade para enviar",
-    amountBtcTitle: "A quantidade exata que você deseja que o endereço de destino receba",
+    amountBtcTitle:
+      "A quantidade exata que você deseja que o endereço de destino receba",
     sendToLabel: "Enviar para",
     sendToPlaceholder: "bc1q... ou 1... ou 3...",
     step3: "Taxa de Transação",
-    step3Hint: "Mínimo do MARA Slipstream = <strong>2× taxa de prioridade atual ou 2 sat/vB</strong>, o que for maior.",
+    step3HintPrefix: "Mínimo do MARA Slipstream = ",
+    step3HintBold: "2× taxa de prioridade atual ou 2 sat/vB",
+    step3HintSuffix: ", o que for maior.",
     customFeeLabel: "Taxa personalizada (sat/vB)",
     maraMinReq: "Min: {0} sat/vB (Requisito MARA Slipstream)",
     feeMin: "Normal ⛏",
@@ -54,35 +65,113 @@ export default {
     errVout: "Insira um VOUT válido (≥ 0).",
     errAmount: "Insira um valor de UTXO válido em sats (≥ 0).",
     errSendAmount: "Insira uma quantidade válida para enviar (BTC).",
-    errDest: "Insira um endereço de destino.",
+    errDest: "Insira um endereço Bitcoin de destino válido.",
     errAmountTooLow: "A quantidade a enviar é muito baixa.",
-    errInsufficient: "Fundos insuficientes. O valor do UTXO ({0} sats) não cobre a quantia a enviar ({1} sats) + taxa ({2} sats). Faltam {3} sats.",
+    errAmountMismatch:
+      "O total do UTXO foi alterado e não bate mais com o valor consultado no mempool.space. Selecione o UTXO novamente.",
+    errFeeTooHigh:
+      "A taxa de {0} sats parece errada (acima de {1} sat/vB ou mais de 10% do valor de entrada). Reduza a taxa para não perder fundos para os mineradores.",
+    utxoTotalLockedTitle:
+      "Travado no valor consultado no mempool.space. Qualquer outro valor seria pago aos mineradores como taxa.",
+    errInsufficient:
+      "Fundos insuficientes. O valor do UTXO ({0} sats) não cobre a quantia a enviar ({1} sats) + taxa ({2} sats). Faltam {3} sats.",
     outputTitle: "✅ Transação Crua Assinada (Hex)",
     copy: "Copiar",
     copied: "✓ Copiado!",
     nextStepsTitle: "Próximos Passos:",
-    stepCopy: "Clique em <strong>Copiar</strong> para salvar sua transação hexadecimal.",
-    stepOpen: "Clique no botão abaixo para abrir o <strong>MARA Slipstream</strong>.",
-    stepPaste: "Cole seu hex no formulário deles e clique em <strong>Submit</strong>!",
+    stepCopyPrefix: "Clique em ",
+    stepCopyBold: "Copiar",
+    stepCopySuffix: " para salvar sua transação hexadecimal.",
+    stepOpenPrefix: "Clique no botão abaixo para abrir o ",
+    stepOpenBold: "MARA Slipstream",
+    stepOpenSuffix: ".",
+    stepPastePrefix: "Cole seu hex no formulário deles e clique em ",
+    stepPasteBold: "Submit",
+    stepPasteSuffix: "!",
     openMaraBtn: "⛏ Abrir Site para enviar manualmente →",
     deriveErrorInvalid: "Chave privada inválida: ",
     deriveLabelAddr: "Endereço derivado",
     deriveLabelPub: "Chave pública",
-    deriveNote: "✅ Confirme que isso corresponde ao endereço do puzzle para o qual você encontrou a chave.",
-    utxoHintEnterKey: "Insira sua chave privada acima para carregar automaticamente o UTXO.",
-    utxoErrNoBalance: "Nenhum UTXO encontrado — este endereço não tem saldo sem gastar. Verifique a chave privada.",
-    utxoErrNetwork: "Não foi possível obter UTXOs do mempool.space — verifique sua conexão com a internet.",
+    deriveNote:
+      "✅ Confirme que isso corresponde ao endereço do puzzle para o qual você encontrou a chave.",
+    utxoHintEnterKey:
+      "Insira sua chave privada acima para carregar automaticamente o UTXO.",
+    utxoErrNoBalance:
+      "Nenhum UTXO encontrado — este endereço não tem saldo sem gastar. Verifique a chave privada.",
+    utxoErrNetwork:
+      "Não foi possível obter UTXOs do mempool.space — verifique sua conexão com a internet.",
     checkMempool: "Verificar no mempool.space",
     utxoListSelect: "Selecione qual UTXO gastar",
     utxoConfirmed: "✅ Confirmado (bloco {0})",
     utxoUnconfirmed: "⏳ Não confirmado",
     utxoAutoFilled: "✅ UTXO preenchido: ",
-    utxoAutoWait: "⏳ Não confirmado — aguarde a confirmação antes de gastar",
+    utxoAutoWait:
+      "⏳ Não confirmado — aguarde a confirmação antes de gastar",
     utxoTotalBtcLabel: "UTXO Total (BTC)",
-    utxoTotalBtcTitle: "O valor total da saída não gasta que você está reivindicando",
-    destHint: "Um endereço de carteira novo que você controla. Use uma carteira fria — NÃO um endereço de corretora.",
-    feeNote: "Uma tx P2PKH de 1 entrada e 1 saída tem ~{0} bytes.",
+    utxoTotalBtcTitle:
+      "O valor total da saída não gasta que você está reivindicando",
+    destHint:
+      "Um endereço de carteira novo que você controla. Use uma carteira fria — NÃO um endereço de corretora.",
+    feeNote: "Uma tx P2PKH tem ~{0} bytes.",
     errUnknown: "Erro desconhecido ao construir a transação.",
-    satoshis: "satoshis"
-  }
+    satoshis: "satoshis",
+  },
+  anatomy: {
+    back: "← Voltar para a Loteria Bitcoin",
+    title: "Anatomia da Chave Bitcoin",
+    subtitle:
+      "Descubra a jornada matemática desde um número aleatório de 256 bits até um endereço público de Bitcoin. Edite qualquer etapa abaixo para ver na prática o que é reversível e o que é protegido por criptografia unidirecional.",
+    presetsLabel: "Exemplos Didáticos:",
+    presetKey1: "Chave #1 (Teste Gênesis)",
+    presetKey2: "Chave #2",
+    presetPuzzle20: "Puzzle #20 (Resolvido)",
+    presetPuzzle71Addr: "Puzzle #71 (Apenas Endereço)",
+    presetRandom: "🎲 Chave Aleatória (256 bits)",
+    privTitle: "1. Chave Privada (Hexadecimal — 256 bits)",
+    privDesc:
+      "O seu segredo fundamental: um número inteiro de 256 bits entre 1 e n − 1 na curva SECP256k1. Totalmente reversível com o formato WIF.",
+    privPlaceholder: "Digite de 1 a 64 caracteres hexadecimais...",
+    wifTitle: "2. Wallet Import Format (WIF)",
+    wifDesc:
+      "Codificação Base58Check da chave privada (prefixo 0x80 + 32 bytes + sufixo 0x01 comprimido + checksum de 4 bytes). Reversível: editar o WIF recupera a chave privada em hex.",
+    wifPlaceholder: "Cole uma chave WIF (K..., L... ou 5...)...",
+    curveTitle: "Curva Elíptica SECP256k1",
+    curveFormula: "y² = x³ + 7 (mod p)",
+    curveCalculating: "calculando P = k × G...",
+    curvePointLabel: "P = k × G (Chave Pública)",
+    curveGeneratorLabel: "G (Gerador)",
+    pubTitle: "3. Chave Pública (Comprimida — 33 bytes)",
+    pubDesc:
+      "Gerada pela multiplicação escalar na Curva Elíptica (P = k × G). É uma função alçapão: fácil de calcular a partir de k, mas matematicamente impossível de reverter (ECDLP).",
+    pubPlaceholder: "66 caracteres hex começando com 02 ou 03...",
+    shaTitle: "4. Hash SHA-256 (32 bytes)",
+    shaDesc:
+      "Primeiro hash unidirecional aplicado sobre a chave pública comprimida. Protege a chave pública de ficar exposta na blockchain enquanto o saldo não é movimentado.",
+    shaPlaceholder: "64 caracteres hexadecimais...",
+    hash160Title: "5. RIPEMD-160 / Hash160 (20 bytes)",
+    hash160Desc:
+      "O resultado do SHA-256 passa pelo RIPEMD-160 gerando uma impressão digital curta de 160 bits. Reversível com o endereço Legacy final via Base58Check!",
+    hash160Placeholder: "40 caracteres hexadecimais...",
+    addrTitle: "6. Endereço Bitcoin Final (Legacy P2PKH)",
+    addrDesc:
+      "Codificação Base58Check do byte de rede 0x00 + Hash160 + checksum (Duplo SHA-256 de 4 bytes). Decodificar um endereço revela seu Hash160, mas NUNCA sua Chave Pública ou Privada!",
+    addrPlaceholder: "Digite um endereço Bitcoin Legacy (1...)...",
+    irreversibleMath:
+      "? (Irreversível: protegido pelo logaritmo discreto SECP256k1)",
+    irreversibleHash:
+      "? (Irreversível: protegido por hash criptográfico unidirecional)",
+    invalidInput:
+      "Formato inválido para esta etapa. Verifique o tamanho e os caracteres.",
+    mempoolBalance: "Saldo On-Chain (Mempool):",
+    fetchingBalance: "Consultando...",
+    balanceError: "Offline / Erro ao consultar saldo",
+    balanceCheckBtn: "Consultar saldo",
+    balanceNotice:
+      "A consulta envia este ENDEREÇO (nunca a chave) ao mempool.space. Não consulte carteiras reais que você queira manter privadas.",
+    securityCalloutTitle: "🛡️ Por que isso é vital nos Bitcoin Puzzles?",
+    securityCalloutBody:
+      "Repare que ao clicar no exemplo 'Puzzle #71 (Apenas Endereço)', é possível extrair imediatamente o Hash160 (Etapa 5) a partir do endereço público, mas a Etapa 3 (Chave Pública) continua oculta pelos hashes RIPEMD-160 e SHA-256! No instante em que você transmite uma transação na mempool aberta, sua assinatura revela a Etapa 3 (Chave Pública), permitindo que bots usem o algoritmo Canguru de Pollard no intervalo conhecido. É por isso que o resgate deve ser feito de forma privada via MARA Slipstream.",
+    footer:
+      "Loteria Bitcoin · Laboratório de Anatomia da Chave · 100% no navegador · Sem servidores · Sem rastreamento",
+  },
 };

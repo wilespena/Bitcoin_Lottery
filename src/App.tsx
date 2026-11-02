@@ -1,6 +1,13 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import bitcoinLogo from "./assets/bitcoin.png";
-import { random32ByteRange, findPrivateKey, findOneRandomBatch, toWIF } from "./bitcoin";
+import {
+  random32ByteRange,
+  findPrivateKey,
+  findOneRandomBatch,
+  toWIF,
+  isValidBitcoinAddress,
+  SECP256K1_ORDER,
+} from "./bitcoin";
 
 import englishContent from "./languages/english";
 import ptContent from "./languages/portuguese";
@@ -69,9 +76,12 @@ const MAX_BATCH = 10000000;
 function App() {
   const [state, setState] = useState(LotteryState.Normal);
   const [lang, setLang] = useState<"en" | "pt" | "es">(() => {
-    return (localStorage.getItem("app_lang") as "en" | "pt" | "es") || "en";
+    const stored = localStorage.getItem("app_lang");
+    if (stored === "en" || stored === "pt" || stored === "es") return stored;
+    return "en";
   });
-  const content = lang === "pt" ? ptContent : lang === "es" ? esContent : englishContent;
+  const content =
+    lang === "pt" ? ptContent : lang === "es" ? esContent : englishContent;
 
   // Real-time balances from mempool
   const [liveBalances, setLiveBalances] = useState<Record<string, string>>({});
@@ -84,19 +94,26 @@ function App() {
   const [attempts, setAttempts] = useState(0);
   const [keysChecked, setKeysChecked] = useState(0);
   const [keysPerSec, setKeysPerSec] = useState(0);
-  const [foundKey, setFoundKey] = useState<{ hex: string; wif: string } | null>(null);
+  const [foundKey, setFoundKey] = useState<{ hex: string; wif: string } | null>(
+    null
+  );
   const [recentKeys, setRecentKeys] = useState<string[]>([]);
 
   // Custom Wallet support
   const [isCustomPuzzle, setIsCustomPuzzle] = useState(false);
   const [customAddressSaved, setCustomAddressSaved] = useState("");
-  const [customAddressBalance, setCustomAddressBalance] = useState<string | null>(null);
+  const [customAddressBalance, setCustomAddressBalance] = useState<
+    string | null
+  >(null);
   const [editingAddress, setEditingAddress] = useState(false);
   const [addressInput, setAddressInput] = useState("");
   const [addressError, setAddressError] = useState<string | null>(null);
   const [isFetchingBalance, setIsFetchingBalance] = useState(false);
 
-  const [customRange, setCustomRange] = useState<{ start: string; end: string } | null>(null);
+  const [customRange, setCustomRange] = useState<{
+    start: string;
+    end: string;
+  } | null>(null);
   const [editingRange, setEditingRange] = useState(false);
   const [rangeInputStart, setRangeInputStart] = useState("");
   const [rangeInputEnd, setRangeInputEnd] = useState("");
@@ -117,46 +134,47 @@ function App() {
   );
 
   useEffect(() => {
-    // Check URL params
     const params = new URLSearchParams(window.location.search);
     const paramLang = params.get("lang");
 
-    const init = () => {
-      if (paramLang === "pt") {
-        setLang("pt");
-      } else if (paramLang === "en") {
-        setLang("en");
-      } else if (paramLang === "es") {
-        setLang("es");
-      } else {
-        const userLang = navigator.language || "en";
-        if (/^pt/i.test(userLang)) setLang("pt");
-        else if (/^es/i.test(userLang)) setLang("es");
-        else setLang("en");
-      }
+    if (paramLang === "pt" || paramLang === "en" || paramLang === "es") {
+      setLang(paramLang);
+    } else if (!localStorage.getItem("app_lang")) {
+      const userLang = navigator.language || "en";
+      if (/^pt/i.test(userLang)) setLang("pt");
+      else if (/^es/i.test(userLang)) setLang("es");
+      else setLang("en");
     }
-    init();
-    init();
 
     // Fetch live balances for unsolved puzzles
     const fetchBalances = async () => {
       const balances: Record<string, string> = {};
       for (const p of PUZZLES) {
-        if (p.number === 20 || p.solved) continue; // Skip test/solved puzzles
+        if (p.number === 20 || p.solved) continue;
         try {
-          const res = await fetch(`https://mempool.space/api/address/${p.address}`);
+          const res = await fetch(
+            `https://mempool.space/api/address/${encodeURIComponent(p.address)}`,
+            { referrerPolicy: "no-referrer" }
+          );
           if (res.ok) {
             const data = await res.json();
-            const totalSats = data.chain_stats.funded_txo_sum - data.chain_stats.spent_txo_sum;
+            if (
+              typeof data?.chain_stats?.funded_txo_sum === "number" &&
+              typeof data?.chain_stats?.spent_txo_sum === "number"
+            ) {
+              const totalSats =
+                data.chain_stats.funded_txo_sum -
+                data.chain_stats.spent_txo_sum;
 
-            if (totalSats === 0) {
-              balances[p.address] = "0 BTC (Solved)";
-            } else {
-              balances[p.address] = satsToDisplay(totalSats);
+              if (totalSats === 0) {
+                balances[p.address] = "0 BTC (Solved)";
+              } else {
+                balances[p.address] = satsToDisplay(totalSats);
+              }
             }
           }
-        } catch (e) {
-          console.error("Failed to fetch balance for", p.address);
+        } catch {
+          // Keep static fallback reward if offline
         }
       }
       setLiveBalances(balances);
@@ -176,11 +194,23 @@ function App() {
   };
 
   // Active range: custom if set, else puzzle default
-  const activeRange = customRange
-    ? { rangeStart: customRange.start, rangeEnd: customRange.end }
-    : isCustomPuzzle
-      ? { rangeStart: "", rangeEnd: "" }
-      : { rangeStart: selectedPuzzle.rangeStart, rangeEnd: selectedPuzzle.rangeEnd };
+  const activeRange = useMemo(
+    () =>
+      customRange
+        ? { rangeStart: customRange.start, rangeEnd: customRange.end }
+        : isCustomPuzzle
+          ? { rangeStart: "", rangeEnd: "" }
+          : {
+              rangeStart: selectedPuzzle.rangeStart,
+              rangeEnd: selectedPuzzle.rangeEnd,
+            },
+    [
+      customRange,
+      isCustomPuzzle,
+      selectedPuzzle.rangeStart,
+      selectedPuzzle.rangeEnd,
+    ]
+  );
 
   const openRangeEditor = () => {
     setRangeInputStart(activeRange.rangeStart);
@@ -197,26 +227,48 @@ function App() {
 
   const applyCustomAddress = async () => {
     const addr = addressInput.trim();
-    if (!addr) {
-      setAddressError(lang === "pt" ? "Insira um endereço válido." : lang === "es" ? "Ingresa una dirección válida." : "Enter a valid address.");
+    if (!addr || !isValidBitcoinAddress(addr)) {
+      setAddressError(
+        lang === "pt"
+          ? "Insira um endereço Bitcoin válido."
+          : lang === "es"
+            ? "Ingresa una dirección Bitcoin válida."
+            : "Enter a valid Bitcoin address."
+      );
       return;
     }
 
     setIsFetchingBalance(true);
     setAddressError(null);
     try {
-      const res = await fetch(`https://mempool.space/api/address/${addr}`);
+      const res = await fetch(
+        `https://mempool.space/api/address/${encodeURIComponent(addr)}`,
+        { referrerPolicy: "no-referrer" }
+      );
       if (!res.ok) {
         throw new Error("Invalid address or network error");
       }
       const data = await res.json();
-      const totalSats = data.chain_stats.funded_txo_sum - data.chain_stats.spent_txo_sum;
+      if (
+        typeof data?.chain_stats?.funded_txo_sum !== "number" ||
+        typeof data?.chain_stats?.spent_txo_sum !== "number"
+      ) {
+        throw new Error("Unexpected response format");
+      }
+      const totalSats =
+        data.chain_stats.funded_txo_sum - data.chain_stats.spent_txo_sum;
       setCustomAddressBalance(satsToDisplay(totalSats));
       setCustomAddressSaved(addr);
       setEditingAddress(false);
       resetState();
-    } catch (e) {
-      setAddressError(lang === "pt" ? "Endereço inválido ou erro de rede." : lang === "es" ? "Dirección inválida o error de red." : "Invalid address or network error.");
+    } catch {
+      setAddressError(
+        lang === "pt"
+          ? "Endereço inválido ou erro de rede."
+          : lang === "es"
+            ? "Dirección inválida o error de red."
+            : "Invalid address or network error."
+      );
     } finally {
       setIsFetchingBalance(false);
     }
@@ -225,12 +277,43 @@ function App() {
   const applyCustomRange = () => {
     const s = rangeInputStart.trim().toLowerCase().replace(/^0x/, "");
     const e = rangeInputEnd.trim().toLowerCase().replace(/^0x/, "");
-    if (!s || !e || !/^[0-9a-f]+$/.test(s) || !/^[0-9a-f]+$/.test(e)) {
-      setRangeError(lang === "pt" ? "Valores hexadecimais inválidos." : lang === "es" ? "Valores hexadecimales inválidos." : "Invalid hex values.");
+    if (
+      !s ||
+      !e ||
+      s.length > 64 ||
+      e.length > 64 ||
+      !/^[0-9a-f]+$/.test(s) ||
+      !/^[0-9a-f]+$/.test(e)
+    ) {
+      setRangeError(
+        lang === "pt"
+          ? "Valores hexadecimais inválidos (1 a 64 caracteres)."
+          : lang === "es"
+            ? "Valores hexadecimales inválidos (1 a 64 caracteres)."
+            : "Invalid hex values (1 to 64 chars)."
+      );
       return;
     }
-    if (BigInt("0x" + s) >= BigInt("0x" + e)) {
-      setRangeError(lang === "pt" ? "O início deve ser menor que o fim." : lang === "es" ? "El inicio debe ser menor que el fin." : "Start must be less than end.");
+    const bs = BigInt("0x" + s);
+    const be = BigInt("0x" + e);
+    if (bs >= be) {
+      setRangeError(
+        lang === "pt"
+          ? "O início deve ser menor que o fim."
+          : lang === "es"
+            ? "El inicio debe ser menor que el fin."
+            : "Start must be less than end."
+      );
+      return;
+    }
+    if (bs < 1n || be >= SECP256K1_ORDER) {
+      setRangeError(
+        lang === "pt"
+          ? "O intervalo deve ficar entre 1 e n − 1 (ordem da curva secp256k1)."
+          : lang === "es"
+            ? "El rango debe estar entre 1 y n − 1 (orden de la curva secp256k1)."
+            : "Range must stay between 1 and n − 1 (secp256k1 curve order)."
+      );
       return;
     }
     setCustomRange({ start: s, end: e });
@@ -288,14 +371,24 @@ function App() {
     if (elapsed > 0) setKeysPerSec(Math.round(totalKeys / elapsed));
   };
 
-  const activeAddress = isCustomPuzzle ? customAddressSaved : selectedPuzzle.address;
+  const activeAddress = isCustomPuzzle
+    ? customAddressSaved
+    : selectedPuzzle.address;
 
   // ── Manual: random start + 50k sequential ────────────────────
   const playNormal = async () => {
-    const start = random32ByteRange(activeRange.rangeStart, activeRange.rangeEnd);
+    const start = random32ByteRange(
+      activeRange.rangeStart,
+      activeRange.rangeEnd
+    );
     setAttempts((n) => n + 1);
     setKeysChecked((n) => n + 50000);
-    const result = await findPrivateKey(start, activeAddress, 50000, activeRange.rangeEnd);
+    const result = await findPrivateKey(
+      start,
+      activeAddress,
+      50000,
+      activeRange.rangeEnd
+    );
     if (result.success && result.privateKey) {
       handleSuccess(result.privateKey);
     } else {
@@ -306,7 +399,10 @@ function App() {
 
   // ── Infinite random: 100% random per key ──────────────────────
   const runInfiniteRandom = useCallback(() => {
-    if (stopRef.current) { setState(LotteryState.Normal); return; }
+    if (stopRef.current) {
+      setState(LotteryState.Normal);
+      return;
+    }
 
     const result = findOneRandomBatch(
       activeAddress,
@@ -324,28 +420,46 @@ function App() {
     setKeysChecked(keysCheckedRef.current);
     updateSpeed(keysCheckedRef.current);
 
-    if (result.success && result.privateKey) { handleSuccess(result.privateKey); return; }
+    if (result.success && result.privateKey) {
+      handleSuccess(result.privateKey);
+      return;
+    }
     setTimeout(runInfiniteRandom, 0);
   }, [activeAddress, activeRange]);
 
   // ── Infinite sequential: random start + N sequential per batch ─
   const runInfiniteSequential = useCallback(async () => {
-    if (stopRef.current) { setState(LotteryState.Normal); return; }
+    if (stopRef.current) {
+      setState(LotteryState.Normal);
+      return;
+    }
 
-    const start = random32ByteRange(activeRange.rangeStart, activeRange.rangeEnd);
+    const start = random32ByteRange(
+      activeRange.rangeStart,
+      activeRange.rangeEnd
+    );
     setRecentKeys((prev) => [start, ...prev].slice(0, 5));
-    const result = await findPrivateKey(start, activeAddress, batchSize, activeRange.rangeEnd);
+    const result = await findPrivateKey(
+      start,
+      activeAddress,
+      batchSize,
+      activeRange.rangeEnd
+    );
 
     keysCheckedRef.current += batchSize;
     setAttempts((n) => n + 1);
     setKeysChecked(keysCheckedRef.current);
     updateSpeed(keysCheckedRef.current);
 
-    if (result.success && result.privateKey) { handleSuccess(result.privateKey); return; }
+    if (result.success && result.privateKey) {
+      handleSuccess(result.privateKey);
+      return;
+    }
 
-    // Use setTimeout to yield to browser between batches
-    setTimeout(() => { runInfiniteSequential(); }, 0);
-  }, [activeAddress, activeRange, batchSize]); // eslint-disable-line react-hooks/exhaustive-deps
+    setTimeout(() => {
+      runInfiniteSequential();
+    }, 0);
+  }, [activeAddress, activeRange, batchSize]);
 
   const startInfiniteLoop = () => {
     stopRef.current = false;
@@ -360,20 +474,30 @@ function App() {
     if (searchMode === "inf-random") {
       setTimeout(runInfiniteRandom, 10);
     } else {
-      setTimeout(() => { runInfiniteSequential(); }, 10);
+      setTimeout(() => {
+        runInfiniteSequential();
+      }, 10);
     }
   };
 
   const handleRoll = () => {
     if (isCustomPuzzle && (!customRange || !customAddressSaved.trim())) {
-      setResultMsg(lang === "pt" ? "Configure o endereço e os limites customizados primeiro." : lang === "es" ? "Configura la dirección y los límites primero." : "Set custom address and range first.");
+      setResultMsg(
+        lang === "pt"
+          ? "Configure o endereço e os limites customizados primeiro."
+          : lang === "es"
+            ? "Configura la dirección y los límites primero."
+            : "Set custom address and range first."
+      );
       return;
     }
 
     if (searchMode === "manual") {
       setState(LotteryState.Loading);
       setResultMsg(null);
-      setTimeout(() => { playNormal(); }, 10);
+      setTimeout(() => {
+        playNormal();
+      }, 10);
     } else {
       startInfiniteLoop();
     }
@@ -394,6 +518,13 @@ function App() {
 
   const isInfinite = searchMode !== "manual";
 
+  const openRelativePage = (page: string) => {
+    const base = window.location.href
+      .split("?")[0]
+      .replace(/\/?(index\.html)?$/, "");
+    window.open(`${base}/${page}`, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <>
       {/* ── Flying coins background ─────────── */}
@@ -402,6 +533,7 @@ function App() {
           key={i}
           src={bitcoinLogo}
           className="flyingbitcoin"
+          alt=""
           style={{
             left: `${coin.left}%`,
             width: coin.size,
@@ -453,11 +585,16 @@ function App() {
       {state !== LotteryState.Success && (
         <div className="puzzle-selector-wrap">
           <p className="puzzle-selector-label">
-            {lang === "pt" ? "Selecione o puzzle:" : lang === "es" ? "Selecciona el puzzle:" : "Select puzzle:"}
+            {lang === "pt"
+              ? "Selecione o puzzle:"
+              : lang === "es"
+                ? "Selecciona el puzzle:"
+                : "Select puzzle:"}
           </p>
           <div className="puzzle-selector">
             {PUZZLES.map((p) => {
-              const isActive = !isCustomPuzzle && selectedPuzzle.number === p.number;
+              const isActive =
+                !isCustomPuzzle && selectedPuzzle.number === p.number;
               return (
                 <button
                   key={p.number}
@@ -469,7 +606,9 @@ function App() {
               );
             })}
             <button
-              className={`puzzle-btn custom-btn${isCustomPuzzle ? " active" : ""}`}
+              className={`puzzle-btn custom-btn${
+                isCustomPuzzle ? " active" : ""
+              }`}
               onClick={() => handleSelectPuzzle("custom")}
             >
               <span className="puzzle-btn-number">🔨 Custom</span>
@@ -487,19 +626,47 @@ function App() {
                     <span className="dot" />
                     <span className="address">{customAddressSaved}</span>
                     {!editingAddress && (
-                      <button className="range-edit-btn" onClick={openAddressEditor} title={lang === "pt" ? "Editar endereço" : lang === "es" ? "Editar dirección" : "Edit address"}>
+                      <button
+                        className="range-edit-btn"
+                        onClick={openAddressEditor}
+                        title={
+                          lang === "pt"
+                            ? "Editar endereço"
+                            : lang === "es"
+                              ? "Editar dirección"
+                              : "Edit address"
+                        }
+                      >
                         ⚙️
                       </button>
                     )}
                   </>
                 ) : (
                   <>
-                    <span className="reward" style={{ color: "#ff4444" }}>ADDRESS:</span>
+                    <span className="reward" style={{ color: "#ff4444" }}>
+                      ADDRESS:
+                    </span>
                     <span className="range-value range-custom">
-                      <span style={{ color: "#ff4444" }}>{lang === "pt" ? "[Obrigatório]" : lang === "es" ? "[Requerido]" : "[Required]"}</span>
+                      <span style={{ color: "#ff4444" }}>
+                        {lang === "pt"
+                          ? "[Obrigatório]"
+                          : lang === "es"
+                            ? "[Requerido]"
+                            : "[Required]"}
+                      </span>
                     </span>
                     {!editingAddress && (
-                      <button className="range-edit-btn" onClick={openAddressEditor} title={lang === "pt" ? "Adicionar endereço" : lang === "es" ? "Añadir dirección" : "Add address"}>
+                      <button
+                        className="range-edit-btn"
+                        onClick={openAddressEditor}
+                        title={
+                          lang === "pt"
+                            ? "Adicionar endereço"
+                            : lang === "es"
+                              ? "Añadir dirección"
+                              : "Add address"
+                        }
+                      >
                         ⚙️
                       </button>
                     )}
@@ -509,8 +676,16 @@ function App() {
                 <>
                   <span className="reward">
                     {selectedPuzzle.solved
-                      ? "🧪 " + (lang === "pt" ? "Modo Teste" : lang === "es" ? "Modo Prueba" : "Test Mode")
-                      : `\u20bf ${liveBalances[selectedPuzzle.address] || selectedPuzzle.reward}`}
+                      ? "🧪 " +
+                        (lang === "pt"
+                          ? "Modo Teste"
+                          : lang === "es"
+                            ? "Modo Prueba"
+                            : "Test Mode")
+                      : `\u20bf ${
+                          liveBalances[selectedPuzzle.address] ||
+                          selectedPuzzle.reward
+                        }`}
                   </span>
                   <span className="dot" />
                   <span className="address">{selectedPuzzle.address}</span>
@@ -518,19 +693,55 @@ function App() {
               )}
             </div>
             <div className="target-badge-range">
-              <span className="range-label">{lang === "pt" ? "intervalo:" : lang === "es" ? "rango:" : "range:"}</span>
-              <span className={`range-value${customRange ? " range-custom" : ""}`}>
-                {isCustomPuzzle && !customRange
-                  ? <span style={{ color: "#ff4444" }}>{lang === "pt" ? "[Obrigatório]" : "[Required]"}</span>
-                  : `${activeRange.rangeStart} → ${activeRange.rangeEnd}`}
+              <span className="range-label">
+                {lang === "pt"
+                  ? "intervalo:"
+                  : lang === "es"
+                    ? "rango:"
+                    : "range:"}
+              </span>
+              <span
+                className={`range-value${customRange ? " range-custom" : ""}`}
+              >
+                {isCustomPuzzle && !customRange ? (
+                  <span style={{ color: "#ff4444" }}>
+                    {lang === "pt"
+                      ? "[Obrigatório]"
+                      : lang === "es"
+                        ? "[Requerido]"
+                        : "[Required]"}
+                  </span>
+                ) : (
+                  `${activeRange.rangeStart} → ${activeRange.rangeEnd}`
+                )}
               </span>
               {!editingRange && (
-                <button className="range-edit-btn" onClick={openRangeEditor} title={lang === "pt" ? "Editar intervalo" : lang === "es" ? "Editar rango" : "Edit range"}>
+                <button
+                  className="range-edit-btn"
+                  onClick={openRangeEditor}
+                  title={
+                    lang === "pt"
+                      ? "Editar intervalo"
+                      : lang === "es"
+                        ? "Editar rango"
+                        : "Edit range"
+                  }
+                >
                   ⚙️
                 </button>
               )}
               {customRange && !editingRange && (
-                <button className="range-reset-btn" onClick={resetRange} title={lang === "pt" ? "Restaurar padrão" : lang === "es" ? "Restaurar por defecto" : "Reset to default"}>
+                <button
+                  className="range-reset-btn"
+                  onClick={resetRange}
+                  title={
+                    lang === "pt"
+                      ? "Restaurar padrão"
+                      : lang === "es"
+                        ? "Restaurar por defecto"
+                        : "Reset to default"
+                  }
+                >
                   ↺
                 </button>
               )}
@@ -545,20 +756,44 @@ function App() {
                   className="range-editor-input"
                   style={{ width: "100%" }}
                   value={addressInput}
-                  onChange={(e) => { setAddressInput(e.target.value); setAddressError(null); }}
+                  onChange={(e) => {
+                    setAddressInput(e.target.value);
+                    setAddressError(null);
+                  }}
                   spellCheck={false}
-                  placeholder={lang === "pt" ? "Cole o endereço..." : lang === "es" ? "Pega la dirección..." : "Paste address..."}
+                  placeholder={
+                    lang === "pt"
+                      ? "Cole o endereço..."
+                      : lang === "es"
+                        ? "Pega la dirección..."
+                        : "Paste address..."
+                  }
                 />
               </div>
               {addressError && <p className="range-error">{addressError}</p>}
               <div className="range-editor-actions">
-                <button className="range-apply-btn" onClick={applyCustomAddress} disabled={isFetchingBalance}>
+                <button
+                  className="range-apply-btn"
+                  onClick={applyCustomAddress}
+                  disabled={isFetchingBalance}
+                >
                   {isFetchingBalance
-                    ? (lang === "pt" ? "Buscando..." : lang === "es" ? "Buscando..." : "Fetching...")
-                    : (lang === "pt" ? "Aplicar" : lang === "es" ? "Aplicar" : "Apply")}
+                    ? lang === "pt" || lang === "es"
+                      ? "Buscando..."
+                      : "Fetching..."
+                    : lang === "pt" || lang === "es"
+                      ? "Aplicar"
+                      : "Apply"}
                 </button>
-                <button className="range-cancel-btn" onClick={() => { setEditingAddress(false); setAddressError(null); }} disabled={isFetchingBalance}>
-                  {lang === "pt" ? "Cancelar" : lang === "es" ? "Cancelar" : "Cancel"}
+                <button
+                  className="range-cancel-btn"
+                  onClick={() => {
+                    setEditingAddress(false);
+                    setAddressError(null);
+                  }}
+                  disabled={isFetchingBalance}
+                >
+                  {lang === "pt" || lang === "es" ? "Cancelar" : "Cancel"}
                 </button>
               </div>
             </div>
@@ -571,7 +806,10 @@ function App() {
                 <input
                   className="range-editor-input"
                   value={rangeInputStart}
-                  onChange={(e) => { setRangeInputStart(e.target.value); setRangeError(null); }}
+                  onChange={(e) => {
+                    setRangeInputStart(e.target.value);
+                    setRangeError(null);
+                  }}
                   spellCheck={false}
                   placeholder={selectedPuzzle.rangeStart}
                 />
@@ -581,7 +819,10 @@ function App() {
                 <input
                   className="range-editor-input"
                   value={rangeInputEnd}
-                  onChange={(e) => { setRangeInputEnd(e.target.value); setRangeError(null); }}
+                  onChange={(e) => {
+                    setRangeInputEnd(e.target.value);
+                    setRangeError(null);
+                  }}
                   spellCheck={false}
                   placeholder={selectedPuzzle.rangeEnd}
                 />
@@ -589,14 +830,24 @@ function App() {
               {rangeError && <p className="range-error">{rangeError}</p>}
               <div className="range-editor-actions">
                 <button className="range-apply-btn" onClick={applyCustomRange}>
-                  {lang === "pt" ? "Aplicar" : lang === "es" ? "Aplicar" : "Apply"}
+                  {lang === "pt" || lang === "es" ? "Aplicar" : "Apply"}
                 </button>
-                <button className="range-cancel-btn" onClick={() => { setEditingRange(false); setRangeError(null); }}>
-                  {lang === "pt" ? "Cancelar" : lang === "es" ? "Cancelar" : "Cancel"}
+                <button
+                  className="range-cancel-btn"
+                  onClick={() => {
+                    setEditingRange(false);
+                    setRangeError(null);
+                  }}
+                >
+                  {lang === "pt" || lang === "es" ? "Cancelar" : "Cancel"}
                 </button>
                 {customRange && (
                   <button className="range-reset-btn-sm" onClick={resetRange}>
-                    {lang === "pt" ? "Restaurar padrão" : lang === "es" ? "Restaurar" : "Reset to default"}
+                    {lang === "pt"
+                      ? "Restaurar padrão"
+                      : lang === "es"
+                        ? "Restaurar"
+                        : "Reset to default"}
                   </button>
                 )}
               </div>
@@ -607,7 +858,6 @@ function App() {
 
       {/* ── Main card ──────────────────────── */}
       <div className="glass-card">
-
         {/* ── Mode selector (always visible unless success/running) ── */}
         {state !== LotteryState.Success && state !== LotteryState.Running && (
           <div className="mode-selector">
@@ -616,35 +866,73 @@ function App() {
               onClick={() => setSearchMode("manual")}
             >
               <span className="mode-icon">🎲</span>
-              <span className="mode-label">{lang === "pt" ? "Manual" : "Manual"}</span>
-              <span className="mode-desc">{lang === "pt" ? "50k por roll" : "50k per roll"}</span>
+              <span className="mode-label">Manual</span>
+              <span className="mode-desc">
+                {lang === "pt"
+                  ? "50k por roll"
+                  : lang === "es"
+                    ? "50k por intento"
+                    : "50k per roll"}
+              </span>
             </button>
             <button
-              className={`mode-btn${searchMode === "inf-random" ? " active" : ""}`}
+              className={`mode-btn${
+                searchMode === "inf-random" ? " active" : ""
+              }`}
               onClick={() => setSearchMode("inf-random")}
             >
               <span className="mode-icon">🎰</span>
-              <span className="mode-label">{lang === "pt" ? "∞ Aleatório" : "∞ Random"}</span>
-              <span className="mode-desc">{lang === "pt" ? "100% aleatório" : "100% random keys"}</span>
+              <span className="mode-label">
+                {lang === "pt"
+                  ? "∞ Aleatório"
+                  : lang === "es"
+                    ? "∞ Aleatorio"
+                    : "∞ Random"}
+              </span>
+              <span className="mode-desc">
+                {lang === "pt"
+                  ? "100% aleatório"
+                  : lang === "es"
+                    ? "100% aleatorio"
+                    : "100% random keys"}
+              </span>
             </button>
             <button
-              className={`mode-btn${searchMode === "inf-sequential" ? " active" : ""}`}
+              className={`mode-btn${
+                searchMode === "inf-sequential" ? " active" : ""
+              }`}
               onClick={() => setSearchMode("inf-sequential")}
             >
               <span className="mode-icon">🔁</span>
-              <span className="mode-label">{lang === "pt" ? "∞ Sequencial" : "∞ Sequential"}</span>
-              <span className="mode-desc">{lang === "pt" ? "random + sequencial" : "random + sequential"}</span>
+              <span className="mode-label">
+                {lang === "pt"
+                  ? "∞ Sequencial"
+                  : lang === "es"
+                    ? "∞ Secuencial"
+                    : "∞ Sequential"}
+              </span>
+              <span className="mode-desc">
+                {lang === "pt"
+                  ? "random + sequencial"
+                  : lang === "es"
+                    ? "random + secuencial"
+                    : "random + sequential"}
+              </span>
             </button>
           </div>
-        )
-        }
+        )}
 
         {/* ── Batch size input (only sequential mode) ── */}
-        {
-          searchMode === "inf-sequential" && state !== LotteryState.Running && state !== LotteryState.Success && (
+        {searchMode === "inf-sequential" &&
+          state !== LotteryState.Running &&
+          state !== LotteryState.Success && (
             <div className="batch-size-wrap">
               <label className="batch-size-label" htmlFor="batch-size-input">
-                {lang === "pt" ? "Chaves por lote:" : lang === "es" ? "Claves por lote:" : "Keys per batch:"}
+                {lang === "pt"
+                  ? "Chaves por lote:"
+                  : lang === "es"
+                    ? "Claves por lote:"
+                    : "Keys per batch:"}
               </label>
               <input
                 id="batch-size-input"
@@ -656,86 +944,121 @@ function App() {
                 value={batchInput}
                 onChange={(e) => handleBatchInput(e.target.value)}
                 onBlur={() => {
-                  const clamped = Math.max(MIN_BATCH, Math.min(MAX_BATCH, batchSize));
+                  const clamped = Math.max(
+                    MIN_BATCH,
+                    Math.min(MAX_BATCH, batchSize)
+                  );
                   setBatchSize(clamped);
                   setBatchInput(String(clamped));
                 }}
               />
               <span className="batch-size-note">
-                {lang === "pt" ? `mín. ${MIN_BATCH.toLocaleString()}` : lang === "es" ? `mín. ${MIN_BATCH.toLocaleString()}` : `min ${MIN_BATCH.toLocaleString()}`}
+                {lang === "pt" || lang === "es"
+                  ? `mín. ${MIN_BATCH.toLocaleString()}`
+                  : `min ${MIN_BATCH.toLocaleString()}`}
               </span>
             </div>
-          )
-        }
+          )}
 
         {/* ── Roll button ── */}
-        {
-          state === LotteryState.Normal && (!isCustomPuzzle || customAddressSaved) && (
+        {state === LotteryState.Normal &&
+          (!isCustomPuzzle || customAddressSaved) && (
             <div className="action-row">
               <button
                 id="roll-btn"
-                className={`roll-button${resultMsg !== null ? " roll-again" : ""}${isInfinite ? " infinite-roll" : ""}`}
+                className={`roll-button${
+                  resultMsg !== null ? " roll-again" : ""
+                }${isInfinite ? " infinite-roll" : ""}`}
                 onClick={handleRoll}
               >
                 {resultMsg !== null && !isInfinite
-                  ? (lang === "pt" ? "🎲 Tentar novamente" : lang === "es" ? "🎲 Intentar de nuevo" : "🎲 Try again")
+                  ? lang === "pt"
+                    ? "🎲 Tentar novamente"
+                    : lang === "es"
+                      ? "🎲 Intentar de nuevo"
+                      : "🎲 Try again"
                   : isInfinite
-                    ? (lang === "pt" ? "▶ Iniciar busca infinita" : lang === "es" ? "▶ Iniciar búsqueda infinita" : "▶ Start infinite search")
+                    ? lang === "pt"
+                      ? "▶ Iniciar busca infinita"
+                      : lang === "es"
+                        ? "▶ Iniciar búsqueda infinita"
+                        : "▶ Start infinite search"
                     : content["roll-btn"]}
               </button>
             </div>
-          )
-        }
+          )}
 
         {/* ── Loading (manual single roll) ── */}
-        {
-          state === LotteryState.Loading && (
-            <div className="loading-wrap">
-              <div className="spinner" />
-              <span className="loading-text">
-                {lang === "pt" ? "Buscando chaves..." : lang === "es" ? "Buscando claves..." : "Searching keys..."}
-              </span>
-            </div>
-          )
-        }
+        {state === LotteryState.Loading && (
+          <div className="loading-wrap">
+            <div className="spinner" />
+            <span className="loading-text">
+              {lang === "pt"
+                ? "Buscando chaves..."
+                : lang === "es"
+                  ? "Buscando claves..."
+                  : "Searching keys..."}
+            </span>
+          </div>
+        )}
 
         {/* ── Running (infinite mode) ── */}
-        {
-          state === LotteryState.Running && (
-            <div className="infinite-running-wrap">
-              <div className="infinite-pulse-ring" />
-              <div className="infinite-running-info">
-                <span className="infinite-running-label">
-                  {searchMode === "inf-random"
-                    ? (lang === "pt" ? "🎰 Busca aleatória infinita" : lang === "es" ? "🎰 Búsqueda aleatoria infinita" : "🎰 Infinite random search")
-                    : (lang === "pt" ? "🔁 Busca sequencial infinita" : lang === "es" ? "🔁 Búsqueda secuencial infinita" : "🔁 Infinite sequential search")}
-                </span>
-                <span className="infinite-running-sub">
-                  {searchMode === "inf-sequential"
-                    ? (lang === "pt"
-                      ? `Gerando início aleatório + ${batchSize.toLocaleString()} sequenciais por lote...`
-                      : lang === "es"
-                        ? `Inicio aleatorio + ${batchSize.toLocaleString()} secuenciales por lote...`
-                        : `Random start + ${batchSize.toLocaleString()} sequential keys per batch...`)
-                    : (lang === "pt"
-                      ? "Testando chaves aleatórias continuamente..."
-                      : lang === "es"
-                        ? "Probando claves aleatorias continuamente..."
-                        : "Testing random keys continuously...")}
-                </span>
-              </div>
+        {state === LotteryState.Running && (
+          <div className="infinite-running-wrap">
+            <div className="infinite-pulse-ring" />
+            <div className="infinite-running-info">
+              <span className="infinite-running-label">
+                {searchMode === "inf-random"
+                  ? lang === "pt"
+                    ? "🎰 Busca aleatória infinita"
+                    : lang === "es"
+                      ? "🎰 Búsqueda aleatoria infinita"
+                      : "🎰 Infinite random search"
+                  : lang === "pt"
+                    ? "🔁 Busca sequencial infinita"
+                    : lang === "es"
+                      ? "🔁 Búsqueda secuencial infinita"
+                      : "🔁 Infinite sequential search"}
+              </span>
+              <span className="infinite-running-sub">
+                {searchMode === "inf-sequential"
+                  ? lang === "pt"
+                    ? `Gerando início aleatório + ${batchSize.toLocaleString()} sequenciais por lote...`
+                    : lang === "es"
+                      ? `Inicio aleatorio + ${batchSize.toLocaleString()} secuenciales por lote...`
+                      : `Random start + ${batchSize.toLocaleString()} sequential keys per batch...`
+                  : lang === "pt"
+                    ? "Testando chaves aleatórias continuamente..."
+                    : lang === "es"
+                      ? "Probando claves aleatorias continuamente..."
+                      : "Testing random keys continuously..."}
+              </span>
+            </div>
 
-              {/* ── Recent Keys for Infinite Modes ── */}
-              {(searchMode === "inf-sequential" || searchMode === "inf-random") && recentKeys.length > 0 && (
+            {/* ── Recent Keys for Infinite Modes ── */}
+            {(searchMode === "inf-sequential" || searchMode === "inf-random") &&
+              recentKeys.length > 0 && (
                 <div className="recent-keys-wrap">
                   <p className="recent-keys-title">
                     {searchMode === "inf-sequential"
-                      ? (lang === "pt" ? "Últimas chaves de início (Start) geradas:" : lang === "es" ? "Últimas claves de inicio (Start) generadas:" : "Latest starting keys generated:")
-                      : (lang === "pt" ? "Últimas chaves aleatórias testadas:" : lang === "es" ? "Últimas claves aleatorias probadas:" : "Latest random keys tested:")}
+                      ? lang === "pt"
+                        ? "Últimas chaves de início (Start) geradas:"
+                        : lang === "es"
+                          ? "Últimas claves de inicio (Start) generadas:"
+                          : "Latest starting keys generated:"
+                      : lang === "pt"
+                        ? "Últimas chaves aleatórias testadas:"
+                        : lang === "es"
+                          ? "Últimas claves aleatorias probadas:"
+                          : "Latest random keys tested:"}
                   </p>
                   <div className="recent-keys-list">
                     {recentKeys.map((k, i) => (
-                      <div key={i} className="recent-key-item" style={{ opacity: 1 - i * 0.15 }}>
+                      <div
+                        key={i}
+                        className="recent-key-item"
+                        style={{ opacity: 1 - i * 0.15 }}
+                      >
                         {k}
                       </div>
                     ))}
@@ -743,108 +1066,162 @@ function App() {
                 </div>
               )}
 
-              <button className="stop-button" onClick={handleStop}>
-                ⏹ {lang === "pt" ? "Parar" : lang === "es" ? "Detener" : "Stop"}
-              </button>
-            </div>
-          )
-        }
+            <button className="stop-button" onClick={handleStop}>
+              ⏹ {lang === "pt" ? "Parar" : lang === "es" ? "Detener" : "Stop"}
+            </button>
+          </div>
+        )}
 
         {/* ── NOT FOUND result ── */}
-        {
-          state === LotteryState.Normal && resultMsg !== null && (
-            <div className="result-box" style={{ marginTop: "0.5rem" }}>
-              <span className="label">
-                {lang === "pt" ? "Ponto de partida testado" : lang === "es" ? "Punto de inicio probado" : "Starting key tested"}
-              </span>
-              <span className="value">{resultMsg}</span>
-            </div>
-          )
-        }
+        {state === LotteryState.Normal && resultMsg !== null && (
+          <div className="result-box" style={{ marginTop: "0.5rem" }}>
+            <span className="label">
+              {lang === "pt"
+                ? "Ponto de partida testado"
+                : lang === "es"
+                  ? "Punto de inicio probado"
+                  : "Starting key tested"}
+            </span>
+            <span className="value">{resultMsg}</span>
+          </div>
+        )}
 
         {/* ── SUCCESS ── */}
-        {
-          state === LotteryState.Success && foundKey && (
-            <div className="success-banner">
-              <div className="success-header">
-                <span className="success-icon">🏆</span>
-                <h2>{content["puzzle-state-success-title"]}</h2>
-              </div>
-              <div className="result-box" style={{ marginTop: "1rem" }}>
-                <span className="label">Private Key (hex)</span>
-                <span className="value">{foundKey.hex}</span>
-              </div>
-              <div className="result-box" style={{ marginTop: "0.75rem" }}>
-                <span className="label">WIF — Import into your wallet</span>
-                <span className="value">{foundKey.wif}</span>
-              </div>
-              <div className="success-warning">
-                ⚠️{" "}
-                {lang === "pt"
-                  ? "NÃO faça uma transação direta! Leia sobre Kangaroos antes de mover os BTC."
-                  : lang === "es"
-                    ? "¡NO hagas una transacción directa! Lee sobre Kangaroos antes de mover los BTC."
-                    : "DO NOT make a direct transaction! Read about Kangaroos before moving the BTC."}
-                {" "}
-                <a href={lang === "pt" ? "./education-pt.html" : lang === "es" ? "./education-es.html" : "./education.html"} target="_blank" rel="noreferrer">
-                  {lang === "pt" ? "Saiba mais →" : lang === "es" ? "Saber más →" : "Learn more →"}
-                </a>
-              </div>
+        {state === LotteryState.Success && foundKey && (
+          <div className="success-banner">
+            <div className="success-header">
+              <span className="success-icon">🏆</span>
+              <h2>{content["puzzle-state-success-title"]}</h2>
+            </div>
+            <div className="result-box" style={{ marginTop: "1rem" }}>
+              <span className="label">Private Key (hex)</span>
+              <span className="value">{foundKey.hex}</span>
+            </div>
+            <div className="result-box" style={{ marginTop: "0.75rem" }}>
+              <span className="label">WIF — Import into your wallet</span>
+              <span className="value">{foundKey.wif}</span>
+            </div>
+            <div className="success-warning">
+              ⚠️{" "}
+              {lang === "pt"
+                ? "NÃO faça uma transação direta! Leia sobre Kangaroos antes de mover os BTC."
+                : lang === "es"
+                  ? "¡NO hagas una transacción directa! Lee sobre Kangaroos antes de mover los BTC."
+                  : "DO NOT make a direct transaction! Read about Kangaroos before moving the BTC."}{" "}
               <a
-                className="tx-builder-link"
-                href={`tx-builder.html?wif=${encodeURIComponent(foundKey.wif)}&hex=${encodeURIComponent(foundKey.hex)}`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  const base = window.location.href.split('?')[0].replace(/\/?(index\.html)?$/, '');
-                  window.open(`${base}/tx-builder.html?wif=${encodeURIComponent(foundKey.wif)}&hex=${encodeURIComponent(foundKey.hex)}`, '_blank');
-                }}
+                href={
+                  lang === "pt"
+                    ? "./education-pt.html"
+                    : lang === "es"
+                      ? "./education-es.html"
+                      : "./education.html"
+                }
+                target="_blank"
+                rel="noopener noreferrer"
               >
-                ⚡ {lang === "pt" ? "Gerar transação para MARA Slipstream" : lang === "es" ? "Generar transacción para MARA Slipstream" : "Build Transaction for MARA Slipstream"}
+                {lang === "pt"
+                  ? "Saiba mais →"
+                  : lang === "es"
+                    ? "Saber más →"
+                    : "Learn more →"}
               </a>
             </div>
-          )
-        }
+            <a
+              className="tx-builder-link"
+              href="tx-builder.html"
+              onClick={(e) => {
+                e.preventDefault();
+                // Hand the key over through sessionStorage and navigate in the
+                // SAME tab: a new tab opened with "noopener" gets a fresh
+                // sessionStorage (so the key would never arrive) and the key
+                // would linger in this tab. The TxBuilder wipes it on load.
+                // The key is never placed in the URL.
+                try {
+                  sessionStorage.setItem("lottery_found_wif", foundKey.wif);
+                  window.location.assign("tx-builder.html");
+                } catch {
+                  // Storage blocked: user can still copy the WIF shown above
+                }
+              }}
+            >
+              ⚡{" "}
+              {lang === "pt"
+                ? "Gerar transação para MARA Slipstream"
+                : lang === "es"
+                  ? "Generar transacción para MARA Slipstream"
+                  : "Build Transaction for MARA Slipstream"}
+            </a>
+          </div>
+        )}
 
         {/* ── Counter ── */}
-        {
-          attempts > 0 && state !== LotteryState.Success && (
-            <div className="attempt-counter">
-              {state === LotteryState.Running && keysPerSec > 0 ? (
-                <>
-                  <span>{lang === "pt" ? "Velocidade:" : lang === "es" ? "Velocidad:" : "Speed:"}</span>
-                  <strong>{keysPerSec.toLocaleString()} keys/s</strong>
-                  <span className="counter-dot" />
-                </>
-              ) : null}
-              <span>{lang === "pt" ? "Chaves testadas:" : lang === "es" ? "Claves probadas:" : "Keys tested:"}</span>
-              <strong>{keysChecked.toLocaleString()}</strong>
-            </div>
-          )
-        }
-      </div >
+        {attempts > 0 && state !== LotteryState.Success && (
+          <div className="attempt-counter">
+            {state === LotteryState.Running && keysPerSec > 0 ? (
+              <>
+                <span>
+                  {lang === "pt"
+                    ? "Velocidade:"
+                    : lang === "es"
+                      ? "Velocidad:"
+                      : "Speed:"}
+                </span>
+                <strong>{keysPerSec.toLocaleString()} keys/s</strong>
+                <span className="counter-dot" />
+              </>
+            ) : null}
+            <span>
+              {lang === "pt"
+                ? "Chaves testadas:"
+                : lang === "es"
+                  ? "Claves probadas:"
+                  : "Keys tested:"}
+            </span>
+            <strong>{keysChecked.toLocaleString()}</strong>
+          </div>
+        )}
+      </div>
 
       {/* ── Info footer ── */}
-      <p
-        className="puzzle-info"
-        dangerouslySetInnerHTML={{ __html: content["puzzle-info"] }}
-      />
+      <p className="puzzle-info">
+        {content.puzzleInfoParts.before71}
+        <strong>{content.puzzleInfoParts.bold71}</strong>
+        {content.puzzleInfoParts.middle}
+        <strong>{content.puzzleInfoParts.bold74}</strong>
+        {content.puzzleInfoParts.after}
+      </p>
 
       {/* ── Action Links ── */}
       <div className="action-links">
         <a
-          href={lang === "pt" ? "./education-pt.html" : lang === "es" ? "./education-es.html" : "./education.html"}
+          href={
+            lang === "pt"
+              ? "./education-pt.html"
+              : lang === "es"
+                ? "./education-es.html"
+                : "./education.html"
+          }
           target="_blank"
-          rel="noreferrer"
+          rel="noopener noreferrer"
           className="action-link-btn"
         >
           {content["btn-education"]}
         </a>
         <a
+          href="key-anatomy.html"
+          onClick={(e) => {
+            e.preventDefault();
+            openRelativePage("key-anatomy.html");
+          }}
+          className="action-link-btn"
+        >
+          {content["btn-anatomy"]}
+        </a>
+        <a
           href="tx-builder.html"
           onClick={(e) => {
             e.preventDefault();
-            const base = window.location.href.split('?')[0].replace(/\/?(index\.html)?$/, '');
-            window.open(`${base}/tx-builder.html`, '_blank');
+            openRelativePage("tx-builder.html");
           }}
           className="action-link-btn"
         >
@@ -853,14 +1230,17 @@ function App() {
       </div>
 
       {/* ── Global Footer ── */}
-      <div className="footer" style={{
-        marginTop: "3rem",
-        paddingTop: "1.5rem",
-        borderTop: "1px solid rgba(255, 255, 255, 0.08)",
-        fontSize: "13px",
-        color: "rgba(255, 255, 255, 0.45)",
-        textAlign: "center"
-      }}>
+      <div
+        className="footer"
+        style={{
+          marginTop: "3rem",
+          paddingTop: "1.5rem",
+          borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+          fontSize: "13px",
+          color: "rgba(255, 255, 255, 0.45)",
+          textAlign: "center",
+        }}
+      >
         {content.footer}
       </div>
     </>
